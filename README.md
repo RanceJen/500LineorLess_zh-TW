@@ -5,10 +5,11 @@
 每一個禮拜翻譯一章並加上筆記
 
 ## 章節處理列表
-
- - Introduction Michael DiBernardo
- - Blockcode: A visual programming toolkit
- - A Continuous Integration System
+| 章節名 | 譯者 | 成品  |
+|---|---|---|
+| [Introduction Michael DiBernardo](http://aosabook.org/en/500L/introduction.html) | BodomMoon |Ongoing|
+|[Blockcode: A visual programming toolkit](http://aosabook.org/en/500L/blockcode-a-visual-programming-toolkit.html)|BodomMoon|Ongoing|
+|[A Continuous Integration System](http://aosabook.org/en/500L/a-continuous-integration-system.html)|hoching| Ongoing|
  - Clustering by Consensus
  - Contingent: A Fully Dynamic Build System
  - A Web Crawler With asyncio Coroutines
@@ -36,6 +37,3 @@ http://aosabook.org/en/index.html
 ## license
 
 This work is made available under the [Creative Commons Attribution 3.0 Unported license](http://creativecommons.org/licenses/by/3.0/legalcode).
-
-## TODO
-將章節列表整理為表格並加上超連結
