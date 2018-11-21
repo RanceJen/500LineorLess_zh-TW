@@ -8,8 +8,8 @@
 | 章節名 | 譯者 | 成品  |
 |---|---|---|
 |[Introduction](http://aosabook.org/en/500L/introduction.html) | RanceJen | [簡介](https://github.com/BodomMoon/500-Lines-or-Less_zh-tw/blob/master/Introduction.md) |
-|[Blockcode: A visual programming toolkit](http://aosabook.org/en/500L/blockcode-a-visual-programming-toolkit.html)|RanceJen|Ongoing|
-|[A Continuous Integration System](http://aosabook.org/en/500L/a-continuous-integration-system.html)|hoching| [Ongoing](https://github.com/BodomMoon/500-Lines-or-Less_zh-tw/blob/master/Blockcode-A-visual-programming-toolkit.md)|
+|[Blockcode: A visual programming toolkit](http://aosabook.org/en/500L/blockcode-a-visual-programming-toolkit.html)|RanceJen|[Ongoing](https://github.com/BodomMoon/500-Lines-or-Less_zh-tw/blob/master/Blockcode-A-visual-programming-toolkit.md)|
+|[A Continuous Integration System](http://aosabook.org/en/500L/a-continuous-integration-system.html)|hoching| Ongoing|
  - Clustering by Consensus
  - Contingent: A Fully Dynamic Build System
  - A Web Crawler With asyncio Coroutines
