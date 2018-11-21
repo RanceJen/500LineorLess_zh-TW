@@ -4,8 +4,10 @@
 
 translated by<`RanceJen`>
 
+**OnGoing**
+
 > Dethe is a geek dad, aesthetic programmer, mentor, and creator of the Waterbear visual programming tool. He co-hosts the Vancouver Maker Education Salons and wants to fill the world with robotic origami rabbits.
-I
+
 Dethe 是一個 geek 父親、藝術性的 programmer、導師以及編程工具 Waterbear 的創造者。他協辦了溫哥華 Maker 教育沙龍以希望能讓世界上充滿摺紙兔。
 
 > In block-based programming languages, you write programs by dragging and connecting blocks that represent parts of the program. Block-based languages differ from conventional programming languages, in which you type words and symbols.
