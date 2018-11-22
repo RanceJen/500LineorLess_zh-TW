@@ -8,7 +8,7 @@ translated by<`RanceJen`>
 
 > Dethe is a geek dad, aesthetic programmer, mentor, and creator of the Waterbear visual programming tool. He co-hosts the Vancouver Maker Education Salons and wants to fill the world with robotic origami rabbits.
 
-Dethe 是一個 geek 父親、藝術性的 programmer、導師以及編程工具 Waterbear 的創造者。他協辦了溫哥華 Maker 教育沙龍以希望能讓世界上充滿摺紙兔。
+Dethe 是一個 geek 父親、藝術性的 programmer、導師以及程式設計工具 Waterbear 的創造者。他協辦了溫哥華 Maker 教育機構以希望能讓世界上充滿紙兔機器人。
 
 > In block-based programming languages, you write programs by dragging and connecting blocks that represent parts of the program. Block-based languages differ from conventional programming languages, in which you type words and symbols.
 >
@@ -20,7 +20,7 @@ Dethe 是一個 geek 父親、藝術性的 programmer、導師以及編程工具
 
 > In contrast, a well-done block language can eliminate syntax errors completely. You can still create a program which does the wrong thing, but you cannot create one with the wrong syntax: the blocks just won't fit that way. Block languages are more discoverable: you can see all the constructs and libraries of the language right in the list of blocks. Further, blocks can be localized into any human language without changing the meaning of the programming language.
 
-相較起來，一個優質的方塊式語言可以完全消除語法錯誤，您依然可以創造一個「完全錯誤的程式」，但您沒辦法創造一個語法錯誤的程式，因為方塊之間就是無法那樣組合。方塊是的語言是更有可見性的。您可以在方塊列表中看見所有程式的結構跟函式庫。更甚之方塊式可以在不改變程式語言本身含意的情況下被融入任何人類語言。
+相較起來，一個優質的方塊式語言可以完全消除語法錯誤，您依然可以創造一個「邏輯錯誤的程式」，但您沒辦法創造一個語法錯誤的程式，因為方塊之間就是無法那樣組合。方塊是的語言是更有可見性的。您可以在方塊列表中看見所有程式的結構跟函式庫。更甚之方塊式可以在不改變程式語言本身含意的情況下被融入任何人類語言。
 
 ![](http://aosabook.org/en/500L/blockcode-images/blockcode_ide.png)
 Figure 1.1 - The Blockcode IDE in use
