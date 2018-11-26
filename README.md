@@ -1,4 +1,4 @@
-[![License](https://img.shields.io/badge/license-CC3.0-blue.svg)](./LICENSE.md) ![Update](https://img.shields.io/badge/update-weekly-green.svg)![pr](https://img.shields.io/badge/pr-welcome-yellow.svg)
+[![License](https://img.shields.io/badge/license-CC3.0-blue.svg)](./LICENSE.md) ![Update](https://img.shields.io/badge/update-weekly-green.svg) ![pr](https://img.shields.io/badge/pr-welcome-yellow.svg)
 
 # The Architecture of Open Source Applications 500 Lines or Less 翻譯筆記計畫
 
