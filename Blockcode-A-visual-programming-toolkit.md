@@ -65,8 +65,44 @@ Figure 1.1 - The Blockcode IDE in use
 
 > A Blockcode script, like a script in any language (whether block- or text-based), is a sequence of operations to be followed. In the case of Blockcode the script consists of HTML elements which are iterated over, and which are each associated with a particular JavaScript function which will be run when that block's turn comes. Some blocks can contain (and are responsible for running) other blocks, and some blocks can contain numeric arguments which are passed to the functions.
 
-Blockcode 的指令就像是任何（不管是方塊式還是語言式）語言的指令一樣，是一些可運算操作的組合，而在 Blockcode 之中的指令則是由迭代的 html 元素組成，他們與特定的 JavaScript 相關聯且在迭代到該方塊時執行，有些方塊可以包含其他的方塊（並且也負責執行他們），有些方塊可以把參數傳遞到實際執行的函式內。
+Blockcode 的指令就像是任何（不管是方塊式還是文字式）語言的指令一樣，是一些可運算操作的組合，而在 Blockcode 之中的指令則是由迭代的 html 元素組成，他們與特定的 JavaScript 相關聯且在迭代到該方塊時執行，有些方塊可以包含其他的方塊（並且也負責執行他們），有些方塊可以把參數傳遞到實際執行的函式內。
  
 > 註：這邊 script 的意指「一個可運算的指令」，像是 `rm -rf /` 。
 
-> 註2：可以包含其他方塊的方塊聽起來有點怪，但其實就是類似 for 這種東西，指令包指令，是不是很合理容易理解惹ヽ(●´∀`●)ﾉ
+> 註2：可以包含其他方塊的方塊聽起來有點怪，但其實就是類似 for 這種東西，指令包指令，是不是很合理容易理解惹 ヽ(●´∀`●)ﾉ
+
+> In most (text-based) languages, a script goes through several stages: a lexer converts the text into recognized tokens, a parser organizes the tokens into an abstract syntax tree, then depending on the language the program may be compiled into machine code or fed into an interpreter. That's a simplification; there can be more steps. For Blockcode, the layout of the blocks in the script area already represents our abstract syntax tree, so we don't have to go through the lexing and parsing stages. We use the Visitor pattern to iterate over those blocks and call predefined JavaScript functions associated with each block to run the program.
+
+在大部份文字式語言，一個指令會經過幾種階段，一個語句分析器將文字轉換為已知的代碼，一個解析器再將代碼組合成一個抽象的語法樹，接著根據語言可能會編譯成機械碼或是再丟到其他的轉譯器內。這還只是簡化的說法，實際上可能還會有更多步驟要做。對於 Blockcode 來說，方塊在指令版面上的配置其實已經代表了抽象的語法樹，所以語句分析器跟解析器的步驟我們其實可以跳過。我們用訪問者模式的設計去迭代這些方塊並且呼叫每個方塊預先對應好的 JavaScript 函式來執行這個程式。
+
+> There is nothing stopping us from adding additional stages to be more like a traditional language. Instead of simply calling associated JavaScript functions, we could replace turtle.js with a block language that emits byte codes for a different virtual machine, or even C++ code for a compiler. Block languages exist (as part of the Waterbear project) for generating Java robotics code, for programming Arduino, and for scripting Minecraft running on Raspberry Pi.
+
+我們也可以輕易的追加不同的處理階段使其更像傳統語言，除了單純呼叫 JavaScript 對應的函式外，我們也可以替換 turtle.js 成產生對應不同虛擬機 byte code ，甚至是生成 C++ 的程式碼給編譯器。方塊式語言(在 Waterbear 有一部份)就是為了產生 Java 的機器人程式碼，來給 Arduino 的程式開發，或是在樹梅派上運行 Minecraft 的指令。
+
+### Web Applications (網頁應用端)
+
+> In order to make the tool available to the widest possible audience, it is web-native. It's written in HTML, CSS, and JavaScript, so it should work in most browsers and platforms.
+>
+> Modern web browsers are powerful platforms, with a rich set of tools for building great apps. If something about the implementation became too complex, I took that as a sign that I wasn't doing it "the web way" and, where possible, tried to re-think how to better use the browser tools.
+
+An important difference between web applications and traditional desktop or server applications is the lack of a main() or other entry point. There is no explicit run loop because that is already built into the browser and implicit on every web page. All our code will be parsed and executed on load, at which point we can register for events we are interested in for interacting with the user. After the first run, all further interaction with our code will be through callbacks we set up and register, whether we register those for events (like mouse movement), timeouts (fired with the periodicity we specify), or frame handlers (called for each screen redraw, generally 60 frames per second). The browser does not expose full-featured threads either (only shared-nothing web workers).
+
+為了最大化這個工具對任何潛在受眾的可用性，它會是純網頁原生的，用 HTML、CSS 和 JavaScript 寫成，所以應該在絕大部分的平台跟瀏覽器上都可以使用。
+
+現代網頁瀏覽器是非常強大的平台，有豐富的工具可以用來建構優質的應用。如果今天實作的某些部份變得過於複雜，這就是個信號「我並不是用做網頁的方法在實作」。這種情況下如果可以的話，試著重新思考如何更好的使用瀏覽器工具。
+
+### Stepping Through the Code(逐步了解程式碼)
+
+> I've tried to follow some conventions and best practices throughout this project. Each JavaScript file is wrapped in a function to avoid leaking variables into the global environment. If it needs to expose variables to other files it will define a single global per file, based on the filename, with the exposed functions in it. This will be near the end of the file, followed by any event handlers set by that file, so you can always glance at the end of a file to see what events it handles and what functions it exposes.
+
+在這個專案中我有盡量去遵循一些便利且優質的作法，每個 JavaScript 的檔案都封裝在一個函式中來避免洩漏任何變數在全域環境中，如果任何檔案有需要將某些數值曝露給其他檔案，則用檔案名稱定義一個 global，所有要曝露的函式都在其中。這些都放在接近檔案的結尾處，後面會接著所有設定之事件處理器。所以你都可以一看檔案結尾就知道他處理了哪些事件和公開了哪些函式。
+
+> 註：假設 menu 需要給 itme 給別人則定義 `global.Menu[item]` 這種做法。
+
+> The code style is procedural, not object-oriented or functional. We could do the same things in any of these paradigms, but that would require more setup code and wrappers to impose on what exists already for the DOM. Recent work on Custom Elements make it easier to work with the DOM in an OO way, and there has been a lot of great writing on Functional JavaScript, but either would require a bit of shoe-horning, so it felt simpler to keep it procedural.
+
+這是程序式程式設計的 code style，而非物件導向或是函數式。這些的程式設計風格都可以做到一樣的事，不過可能會需要更多設定用程式碼和封裝來加在 DOM 已存在的東西之上，雖然最近有一個 Custom Elements 的功能可以輕易將 DOM 用物件導向的方式操作，在函數式 JavaScript 上也有很多優秀的寫法，但作者覺得這樣都有點卡腳，所以用程序式的方式去寫感覺是最簡單的。
+
+There are eight source files in this project, but index.html and blocks.css are basic structure and style for the app and won't be discussed. Two of the JavaScript files won't be discussed in any detail either: util.js contains some helpers and serves as a bridge between different browser implementations—similar to a library like jQuery but in less than 50 lines of code. file.js is a similar utility used for loading and saving files and serializing scripts.
+
+An important difference between web applications and traditional desktop or server applications is the lack of a main() or other entry point. There is no explicit run loop because that is already built into the browser and implicit on every web page. All our code will be parsed and executed on load, at which point we can register for events we are interested in for interacting with the user. After the first run, all further interaction with our code will be through callbacks we set up and register, whether we register those for events (like mouse movement), timeouts (fired with the periodicity we specify), or frame handlers (called for each screen redraw, generally 60 frames per second). The browser does not expose full-featured threads either (only shared-nothing web workers).
