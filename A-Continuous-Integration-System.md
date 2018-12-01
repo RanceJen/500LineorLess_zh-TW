@@ -7,7 +7,7 @@ translated by<`Hoching`>
 
 > Malini Das is a software engineer who is passionate about developing quickly (but safely!), and solving cross-functional problems. She has worked at Mozilla as a tools engineer and is currently honing her skills at Twitch. Follow Malini on Twitter or on her blog.
 
-Malini Das 是一個熱衷於快速（但安全！）的開發，並解決跨功能問題的軟體工程師。她曾在Mozilla擔任工具工程師，現在則在Twitch磨練他的技能。想知道更多有關Malini，可以參見[Twitter](https://twitter.com/malinidas)或她的[blog](http://www.malinidas.com/)。
+Malini Das 是一個熱衷於快速（但安全！）的開發，並解決跨功能問題的軟體工程師。她曾在 Mozilla 擔任工具工程師，現在則在 Twitch 磨練他的技能。想知道更多有關 Malini，可以參見 [Twitter](https://twitter.com/malinidas)或她的 [blog](http://www.malinidas.com/)。
 
 ## What is a Continuous Integration System?（什麼是持續性整合系統？）
 
@@ -37,7 +37,7 @@ Malini Das 是一個熱衷於快速（但安全！）的開發，並解決跨功
 
 > Continuous integration systems monitor a master repository which is usually hosted on a web server, and not local to the CI's file systems. For the cases of our example, we will use a local repository instead of a remote repository.
 
-持續性整合系統通常是監控一個在架設在網頁伺服器的主版本庫，兩者不是在同一個本地端。然而在我們的範例程式中，會使用本地端的版本庫來取代遠端的版本庫。
+持續性整合系統通常是監控一個在架設在網頁伺服器的 master 版本庫，兩者不是在同一個本地端。然而在我們的範例程式中，會使用本地端的版本庫來取代遠端的版本庫。
 
 > Continuous integration systems need not run on a fixed, regular schedule. You can also have them run every few commits, or per-commit. For our example case, the CI system will run periodically. This means if it is set up to check for changes in five-second periods, it will run tests against the most recent commit made after the five-second period. It won't test every commit made within that period of time, only the most recent one.
 
@@ -126,13 +126,13 @@ $ git init
 
 > This will be our master repository. This is where developers check in their code, so our CI should pull this repository and check for commits, then run tests. The thing that checks for new commits is the repository observer.
 
-這會是我們主要的版本庫，這也是開發者寫入他們程式碼的地方，所以我們的持續性整合系統會從此版本庫 pull，並確認提交，然後執行測試。是由版本庫監控器來確認新的提交。
+這會是我們的 master 版本庫，這也是開發者寫入他們程式碼的地方，所以我們的持續性整合系統會從此版本庫 pull，並確認提交，然後執行測試。是由版本庫監控器來確認新的提交。
 
 > 註： check in?
 
 > The repository observer works by checking commits, so we need at least one commit in the master repository. Let’s commit our example tests so we have some tests to run.
 
-版本庫監控器的工作就是確認提交，所以我們至少在要 master 版本庫至少要有一個提交。讓我們把範例中的 tests 提交上去，那我們就有一些測試可以做。
+版本庫監控器的工作就是確認提交，所以我們至少在要 master 版本庫至少要有一個提交。把範例中的 tests 提交上去後，我們就可以執行一些測試。
 
 > Copy the tests folder from this code base to test_repo and commit it:
 
@@ -738,7 +738,7 @@ $ python repo_observer.py --dispatcher-server=localhost:8888 <path/to/repo_clone
 
 > Now that everything is set up, let's trigger some tests! To do that, we'll need to make a new commit. Go to your master repository and make an arbitrary change:
 
-現在一切都設定好了，讓我們來觸發一些測試吧！為了觸發測試，我們必須執行一個新的提交，所以要去你的版本庫做一些隨意的改動。
+現在一切都設定好了，讓我們來觸發一些測試吧！為了觸發測試，我們必須執行一個新的提交，所以要去你的 master 版本庫做一些隨意的改動。
 
 ```
 $ cd /path/to/test_repo
