@@ -116,7 +116,7 @@ Malini Das 是一個熱衷於快速（但安全！）的開發，並解決跨功
 
 > Let's call this test_repo:
 
-讓我們呼叫 `test_repo`:
+讓我們叫它 `test_repo`:
 
 ```
 $ mkdir test_repo 
@@ -126,13 +126,13 @@ $ git init
 
 > This will be our master repository. This is where developers check in their code, so our CI should pull this repository and check for commits, then run tests. The thing that checks for new commits is the repository observer.
 
-這會是我們的 master 版本庫，這也是開發者寫入他們程式碼的地方，所以我們的持續性整合系統會從此版本庫 pull，並確認提交，然後執行測試。是由版本庫監控器來確認新的提交。
+這會是我們的 master 版本庫，這也是開發者寫入他們程式碼的地方，所以我們的持續性整合系統會從此版本庫 pull，並確認提交，然後執行測試。版本庫監控器會確認新的提交。
 
 > 註： check in?
 
 > The repository observer works by checking commits, so we need at least one commit in the master repository. Let’s commit our example tests so we have some tests to run.
 
-版本庫監控器的工作就是確認提交，所以我們至少在要 master 版本庫至少要有一個提交。把範例中的 tests 提交上去後，我們就可以執行一些測試。
+版本庫監控器的工作就是確認提交，所以我們在 master 版本庫至少要有一個提交。把範例中的 tests 提交上去後，我們就可以執行一些測試。
 
 > Copy the tests folder from this code base to test_repo and commit it:
 
@@ -236,7 +236,7 @@ source run_or_fail.sh
 
 > Next, the script tries to remove a file named `.commit_id`. Since updaterepo.sh is called infinitely by the `repo_observer.py` file, if we previously had a new commit, then `.commit_id` was created, but holds a commit we already tested. Therefore, we want to remove that file, and create a new one only if a new commit is found.
 
-接著，這個腳本試著移除 `.commit_id` 這個檔案。因為在 `repo_observer.py` 會無止境地呼叫 `updaterepo.sh`，如果我們之前有一個提交，那 `.commit_id` 就已經被創建，但其實是存著我們已經測試過的提交。因此，我們會先將該檔案移除，移植到有新的提交才創建新的檔案。
+接著，這個腳本試著移除 `.commit_id` 這個檔案。因為在 `repo_observer.py` 會無止境地呼叫 `updaterepo.sh`，如果我們之前有一個提交，那 `.commit_id` 就已經被創建，但其實是存著我們已經測試過的提交。因此，我們會先將該檔案移除，一直到有新的提交才創建新的檔案。
 
 ```
 bash rm -f .commit_id 
@@ -615,7 +615,7 @@ class ThreadingTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 > This means that when the dispatcher server makes a request (a ping, in this case) and expects a response, it will be done on a separate thread, while the test runner is busy running tests on its own thread. This allows the test runner server to handle multiple tasks simultaneously. Instead of this threaded design, it is possible to have the dispatcher server hold onto a connection with each test runner, but this would increase the dispatcher server's memory needs, and is vulnerable to network problems, like accidentally dropped connections.
 
-這代表當分配器伺服器下了一個請求（在此情況下，ping 了一次）且期待收到回應，這件事會在另一個分開的線程上執行，因為測試執行器正忙於在它的線程上執行測試。這樣一來也讓測試執行器可以同時處理多個任務。如果不使用線程的設計，也是可以讓分配器一直和每個測試執行器保持連線，但這會增加分配器伺服器的記憶體需求，對於網路的問題，像是意外地斷了連線，也會比較脆弱。
+這代表當分配器伺服器下了一個請求（在此情況下，ping 了一次）且期待收到回應，這件事會在另一個分開的線程上執行，因為測試執行器正忙於在它的線程上執行測試。這樣一來也讓測試執行器可以同時處理多個任務。如果不使用線程的設計，也是可以讓分配器一直和每個測試執行器保持連線，但這會增加分配器伺服器的記憶體需求，且對於網路的問題，像是意外地斷了連線，也會比較脆弱。
 
 > The test runner server responds to two messages from the dispatcher. The first is `ping`, which is used by the dispatcher server to verify that the runner is still active.
 
@@ -693,8 +693,8 @@ run_or_fail "Could not update to given commit hash" git reset --hard "$COMMIT"
 
 > In order to run test_runner.py, you must point it to a clone of the repository to run tests against. In this case, you can use the previously created /path/to/test_repo test_repo_clone_runner clone as the argument. By default, test_runner.py will start its own server on localhost using a port in the range 8900-9000, and will try to connect to the dispatcher server at localhost:8888. You may pass it optional arguments to change these values. The --host and --port arguments are used to designate a specific address to run the test runner server on, and the --dispatcher-server argument specifies the address of the dispatcher.
 
-為了執行 `test_runner.py`，你必須指向一個版本庫的副本來執行測試。在這個情況下，你可以使用之前創建的 `/path/to/test_repo test_repo_clone_runner` clone 當作參數。`test_runner.py`預設會在 localhost 啟動它自己的伺服器，使用 port 範圍 8900-9000，
-且會和分配器伺服器在 `localhost:8888` 連線。你可以傳一個非強制性的參數來取代這些數值。`--host` 和 `--port` 參數都用來指派一個特定的位址給測試執行器伺服器做執行。`--dispatcher-server` 參數則指定了分配器的位址。
+為了執行 `test_runner.py`，你必須指向一個版本庫的副本來執行測試。在這個情況下，你可以使用之前創建的 `/path/to/test_repo test_repo_clone_runner` 複本當作參數。`test_runner.py` 預設會在 localhost 啟動它自己的伺服器，使用 port 範圍 8900-9000，
+且會和分配器伺服器在 `localhost:8888` 連線。你可以傳入參數來取代這些數值，但非強制性。`--host` 和 `--port` 參數都用來指派一個特定的位址給測試執行器伺服器做執行。`--dispatcher-server` 參數則指定了分配器的位址。
 
 ### Control Flow Diagram (控制流程圖)
 
@@ -767,7 +767,7 @@ $ git commit -m"new file" new_file
 
 > You can also kill the test runner, to simulate a machine crash or network failure. If you do so, the dispatcher will realize the runner went down and will give another test runner the job if one is available in the pool, or will wait for a new test runner to register itself in the pool.
 
-你也可以把測試執行者砍掉，來模擬一台機器故障或是網路有問題。如果你這麼做的話，分配器會發現測試執行器關閉了，若池裡有可使用的測試執行器的話，它就會把工作分給該測試執行器，若沒有的話，它就會等到有新的測試執行器來註冊到池裡。
+你也可以把測試執行者砍掉，來模擬一台機器故障或是網路有問題。如果你這麼做的話，分配器會發現測試執行器關閉了，若池裡有其他可使用的測試執行器的話，它就會把工作分給該測試執行器，若沒有的話，它就會等到有新的測試執行器來註冊到池裡。
 
 > If you kill the dispatcher, the repository observer will figure out it went down and will throw an exception. The test runners will also notice, and shut down.
 
@@ -777,7 +777,7 @@ $ git commit -m"new file" new_file
 
 > By separating concerns into their own processes, we were able to build the fundamentals of a distributed continuous integration system. With processes communicating with each other via socket requests, we are able to distribute the system across multiple machines, helping to make our system more reliable and scalable.
 
-藉由個別去關注每個元件的程序，我們可以建構基本的分散式持續性整合系統。由於程序間藉由 socket 請求溝通，我們可以將系統分散到多個機器上，幫助我們的系統更加可靠及可擴展。
+藉由個別去關注每個元件的程序，我們可以建構基本的分散式持續性整合系統。由於程序間是藉由 socket 請求溝通，我們可以將系統分散到多個機器上，幫助我們的系統更加可靠及可擴展。
 
 > Since the CI system is quite simple now, you can extend it yourself to be far more functional. Here are a few suggestions for improvements:
 
@@ -787,25 +787,25 @@ $ git commit -m"new file" new_file
 
 > The current system will periodically check to see if new commits are run and will run the most recent commit. This should be improved to test each commit. To do this, you can modify the periodic checker to dispatch test runs for each commit in the log between the last-tested and the latest commit.
 
-目前的系統會定期確認是否有新的提交，且會執行最近一個提交的測試。這應該要改良成可以對每個提交都做測試。為了達成此目的，你可以修改定期的確認器，去對 log 中上次測試的到最近一次的提交之間的每一個提交，作分配並測試。
+目前的系統會定期確認是否有新的提交，且會執行最近一個提交的測試。這應該要改良成可以對每個提交都做測試。為了達成此目的，你可以修改定期的確認器，去對 log 中上一次測試的和最新提交之間的每一個提交，作分配並測試。
 
 ### Smarter Test Runners（更聰明的測試執行器）
 
 > If the test runner detects that the dispatcher is unresponsive, it stops running. This happens even when the test runner is in the middle of running tests! It would be better if the test runner waited for a period of time (or indefinitely, if you do not care about resource management) for the dispatcher to come back online. In this case, if the dispatcher goes down while the test runner is actively running a test, instead of shutting down it will complete the test and wait for the dispatcher to come back online, and will report the results to it. This will ensure that we don't waste any effort the test runner makes, and that we will only run tests once per commit.
 
-如果測試執行器偵測到分配器沒有回應，它就會停止執行，即使在執行測試的期間也會如此做。比較好的做法是測試執行器會等一段時間（或是永久等待，如果你不在意資源的管理），到分配器重新上線。在這個情況下，如果分配器在測試執行器執行測試時關閉了，執行器將會把測試完成，並等待分配器重新上線，然後把結果回報。這會確保測試執行器的努力不會白費，且每一次的提交只會執行一次測試。
+如果測試執行器偵測到分配器沒有回應，它就會停止執行，即使在執行測試的期間也會如此做。比較好的做法是測試執行器會等一段時間（或是永久等待，如果你不在意資源的管理），到分配器重新上線，在這個情況下，如果分配器在測試執行器執行測試時關閉了，執行器將會把測試完成，並等待分配器重新上線，然後把結果回報。這會確保測試執行器的努力不會白費，且每一次的提交只會執行一次測試。
 
 ### Real Reporting（實際回報）
 
 > In a real CI system, you would have the test results report to a reporter service which would gather the results, post them somewhere for people to review, and notify a list of interested parties when a failure or other notable event occurs. You can extend our simple CI system by creating a new process to get the reported results, instead of the dispatcher gathering the results. This new process could be a web server (or can connect to a web server) which could post the results online, and may use a mail server to alert subscribers to any test failures.
 
-在實際的持續性整合系統，你會需要將測試結果回報給收集結果的回報者服務系統。它會把測試結果傳到某個人們可以審閱的地方，而且當有錯誤或是需要通知的事件發生時，會通知名單中正在關注的群體。你可以擴展我們簡單的持續性整合系統，創建一個新的程序來回報結果，而不是讓分配器來收及測試結果。這個新的程序可以是網路伺服器（或者可以連到網路伺服器），它可以將結果發佈上線，當有任何測試錯誤時，可以使用電子郵件伺服器去警告訂閱者。
+在實際的持續性整合系統，你會需要將測試結果回報給收集結果的回報者服務系統。它會把測試結果傳到某個人們可以審閱的地方，而且當有錯誤或是需要通知的事件發生時，會通知名單中正在關注的群體。你可以擴展我們簡單的持續性整合系統，創建一個新的程序來回報結果，而不是讓分配器來收r集測試結果。這個新的程序可以是網路伺服器（或者可以連到網路伺服器），它可以將結果發佈上線，當有任何測試錯誤時，可以使用電子郵件伺服器去警告訂閱者。
 
 ### Test Runner Manager（測試執行器管理器）
 
 > Right now, you have to manually launch the test_runner.py file to start a test runner. Instead, you could create a test runner manager process which would assess the current load of test requests from the dispatcher and scale the number of active test runners accordingly. This process will receive the runtest messages and will start a test runner process for each request, and will kill unused processes when the load decreases.
 
-現在你必須手動執行 `test_runner.py` 檔案來啟動一個測試執行器。取而代之地，你可以創建一個測試執行器的管理器程序，它可以獲取目前測試請求的負載量，然後據此來調整有效的測試執行器數量。這個程序會接收 runtest 的訊息，接著對於每個請求會啟動一個測試執行器程序，當負載降低時，也會砍掉沒用到的程序。
+目前你必須手動執行 `test_runner.py` 檔案來啟動一個測試執行器。取而代之地，你可以創建一個測試執行器的管理器程序，它可以獲取目前測試請求的負載量，然後據此來調整有效的測試執行器數量。這個程序會接收 runtest 的訊息，接著對於每個請求會啟動一個測試執行器程序，當負載降低時，也會砍掉沒用到的程序。
 
 > Using these suggestions, you can make this simple CI system more robust and fault-tolerant, and you can integrate it with other systems, like a web-based test reporter.
 
@@ -813,11 +813,11 @@ $ git commit -m"new file" new_file
 
 > If you wish to see the level of flexibility continuous integration systems can achieve, I recommend looking into Jenkins, a very robust, open-source CI system written in Java. It provides you with a basic CI system which you can extend using plugins. You may also access its source code through GitHub. Another recommended project is Travis CI, which is written in Ruby and whose source code is also available through GitHub.
 
-如果你想知道持續性整合系統可以多有彈性，我推薦你去看 [Jenkins](https://jenkins.io/)，它是一個非常穩定、用Java寫的開源持續性整合系統。它提供了基本的持續性整合系統，你可以用插件來擴充。你也可以在 [GitHub](https://github.com/jenkinsci/jenkins/) 取得它的原始碼。另一個推薦的專案是 [Travis CI](https://travis-ci.org/)，它是用 Ruby 寫的，原始碼一樣可以在 [GitHub](https://github.com/travis-ci/travis-ci) 取得。
+如果你想知道持續性整合系統可以多有彈性，我推薦你去看 [Jenkins](https://jenkins.io/)，它是一個非常穩定、用Java寫的開源持續性整合系統。它提供了基本的持續性整合系統，你可以用插件來擴充，你也可以在 [GitHub](https://github.com/jenkinsci/jenkins/) 取得它的原始碼。另一個推薦的專案是 [Travis CI](https://travis-ci.org/)，它是用 Ruby 寫的，原始碼一樣可以在 [GitHub](https://github.com/travis-ci/travis-ci) 取得。
 
 > This has been an exercise in understanding how CI systems work, and how to build one yourself. You should now have a more solid understanding of what is needed to make a reliable distributed system, and you can now use this knowledge to develop more complex solutions.
 
-這是一個了解持續性整合系統，且如何自己建造的練習。你應該對於如何做出一個可靠的分散式系統，有更深刻的了解。你也可以將這些知識用於開發更複雜的解決方案。
+這是一個了解持續性整合系統，且如何自己建立系統的練習。你應該對於如何做出一個可靠的分散式系統，有更深刻的了解。你也可以將這些知識用於開發更複雜的解決方案。
 
 ---
 > ##### 1. Bash is used because we need to check file existence, create files, and use Git, and a shell script is the most direct and easy way to achieve this. Alternatively, there are cross-platform Python packages you can use; for example, Python's os built-in module can be used for accessing the file system, and GitPython can be used for Git access, but they perform actions in a more roundabout way.
