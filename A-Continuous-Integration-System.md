@@ -777,7 +777,7 @@ $ git commit -m"new file" new_file
 
 > By separating concerns into their own processes, we were able to build the fundamentals of a distributed continuous integration system. With processes communicating with each other via socket requests, we are able to distribute the system across multiple machines, helping to make our system more reliable and scalable.
 
-藉由個別去關注每個元件的程序，我們可以建構基本的分散式持續性整合系統。由於程序間藉由 socket 請求溝通，我們可以將系統分散到多個機器上，幫助我們的系統更加可靠及可擴展。
+藉由個別去關注每個元件的程序，我們可以建構基本的分散式持續性整合系統。由於程序間藉由 socket 請求溝通，我們可以將系統分散到多個機器上，幫助我們的系統更加可靠及可擴展。
 
 > Since the CI system is quite simple now, you can extend it yourself to be far more functional. Here are a few suggestions for improvements:
 
@@ -787,7 +787,7 @@ $ git commit -m"new file" new_file
 
 > The current system will periodically check to see if new commits are run and will run the most recent commit. This should be improved to test each commit. To do this, you can modify the periodic checker to dispatch test runs for each commit in the log between the last-tested and the latest commit.
 
-目前的系統會定期確認是否有新的提交，且會執行最近一個提交的測試。這應該要改良成可以對每個提交都做測試。為了達成此目的，你可以修改定期的確認器，去對 log 中上次測試的到最近一次的提交之間的每一個提交，作分配並測試。
+目前的系統會定期確認是否有新的提交，且會執行最近一個提交的測試。這應該要改良成可以對每個提交都做測試。為了達成此目的，你可以修改定期的確認器，去對 log 中上次測試的到最近一次的提交之間的每一個提交，作分配並測試。
 
 ### Smarter Test Runners（更聰明的測試執行器）
 
@@ -817,9 +817,9 @@ $ git commit -m"new file" new_file
 
 > This has been an exercise in understanding how CI systems work, and how to build one yourself. You should now have a more solid understanding of what is needed to make a reliable distributed system, and you can now use this knowledge to develop more complex solutions.
 
-這是一個了解持續性整合系統，且如何自己建造的練習。你應該對於如何做出一個可靠的分散式系統，有更深刻的了解。你也可以將這些知識用於開發更複雜的解決方案。
+這是一個了解持續性整合系統，且如何自己建造的練習。你應該對於如何做出一個可靠的分散式系統，有更深刻的了解。你也可以將這些知識用於開發更複雜的解決方案。
 
 ---
 > ##### 1. Bash is used because we need to check file existence, create files, and use Git, and a shell script is the most direct and easy way to achieve this. Alternatively, there are cross-platform Python packages you can use; for example, Python's os built-in module can be used for accessing the file system, and GitPython can be used for Git access, but they perform actions in a more roundabout way.
 
-##### <a id="note1">作者註1.</a> 在此使用 Bash 是因為我們需要確認檔案是否存在、建立檔案和使用 Git，而用 shell script 是最直接且簡單的方法。你也可以用跨平台的 Python packages。例如：Python 內建的 os 套件可以用來存取檔案系統；GitPython 可以用來存取 Git。但它們會用比較迂迴的方式來執行動作。[↩](#back1)
+##### <a id="note1">作者註1.</a> 在此使用 Bash 是因為我們需要確認檔案是否存在、建立檔案和使用 Git，而用 shell script 是最直接且簡單的方法。你也可以用跨平台的 Python packages。例如：Python 內建的 os 套件可以用來存取檔案系統；GitPython 可以用來存取 Git。但它們會用比較迂迴的方式來執行動作。[↩](#back1)
