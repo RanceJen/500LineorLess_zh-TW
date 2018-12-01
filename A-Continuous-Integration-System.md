@@ -236,7 +236,7 @@ source run_or_fail.sh
 
 > Next, the script tries to remove a file named `.commit_id`. Since updaterepo.sh is called infinitely by the `repo_observer.py` file, if we previously had a new commit, then `.commit_id` was created, but holds a commit we already tested. Therefore, we want to remove that file, and create a new one only if a new commit is found.
 
-接著，這個腳本試著移除 `.commit_id` 這個檔案。因為在 `repo_observer.py` 會無止境地呼叫 `updaterepo.sh`，如果我們之前有一個提交，那 `.commit_id` 就已經被創建，但其實是存著我們已經測試過的提交。因此，我們會先將該檔案移除，移植到有新的提交才創建新的檔案。
+接著，這個腳本試著移除 `.commit_id` 這個檔案。因為在 `repo_observer.py` 會無止境地呼叫 `updaterepo.sh`，如果我們之前有一個提交，那 `.commit_id` 就已經被創建，但其實是存著我們已經測試過的提交。因此，我們會先將該檔案移除，移植到有新的提交才創建新的檔案。
 
 ```
 bash rm -f .commit_id 
@@ -817,7 +817,7 @@ $ git commit -m"new file" new_file
 
 > This has been an exercise in understanding how CI systems work, and how to build one yourself. You should now have a more solid understanding of what is needed to make a reliable distributed system, and you can now use this knowledge to develop more complex solutions.
 
-這是一個了解持續性整合系統，且如何自己建造的練習。你應該對於如何做出一個可靠的分散式系統，有更深刻的了解。你也可以將這些知識用於開發更複雜的解決方案。
+這是一個了解持續性整合系統，且如何自己建造的練習。你應該對於如何做出一個可靠的分散式系統，有更深刻的了解。你也可以將這些知識用於開發更複雜的解決方案。
 
 ---
 > ##### 1. Bash is used because we need to check file existence, create files, and use Git, and a shell script is the most direct and easy way to achieve this. Alternatively, there are cross-platform Python packages you can use; for example, Python's os built-in module can be used for accessing the file system, and GitPython can be used for Git access, but they perform actions in a more roundabout way.
