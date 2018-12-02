@@ -85,11 +85,13 @@ Blockcode 的指令就像是任何（不管是方塊式還是文字式）語言�
 >
 > Modern web browsers are powerful platforms, with a rich set of tools for building great apps. If something about the implementation became too complex, I took that as a sign that I wasn't doing it "the web way" and, where possible, tried to re-think how to better use the browser tools.
 
-An important difference between web applications and traditional desktop or server applications is the lack of a main() or other entry point. There is no explicit run loop because that is already built into the browser and implicit on every web page. All our code will be parsed and executed on load, at which point we can register for events we are interested in for interacting with the user. After the first run, all further interaction with our code will be through callbacks we set up and register, whether we register those for events (like mouse movement), timeouts (fired with the periodicity we specify), or frame handlers (called for each screen redraw, generally 60 frames per second). The browser does not expose full-featured threads either (only shared-nothing web workers).
-
 為了最大化這個工具對任何潛在受眾的可用性，它會是純網頁原生的，用 HTML、CSS 和 JavaScript 寫成，所以應該在絕大部分的平台跟瀏覽器上都可以使用。
 
 現代網頁瀏覽器是非常強大的平台，有豐富的工具可以用來建構優質的應用。如果今天實作的某些部份變得過於複雜，這就是個信號「我並不是用做網頁的方法在實作」。這種情況下如果可以的話，試著重新思考如何更好的使用瀏覽器工具。
+
+> An important difference between web applications and traditional desktop or server applications is the lack of a main() or other entry point. There is no explicit run loop because that is already built into the browser and implicit on every web page. All our code will be parsed and executed on load, at which point we can register for events we are interested in for interacting with the user. After the first run, all further interaction with our code will be through callbacks we set up and register, whether we register those for events (like mouse movement), timeouts (fired with the periodicity we specify), or frame handlers (called for each screen redraw, generally 60 frames per second). The browser does not expose full-featured threads either (only shared-nothing web workers).
+
+網頁應用程式和傳統桌面端或伺服器端應用之間的一個重要差別在於缺少 main() 或是其他的程式進入點，他並不會明確的「執行」，因為該流程已經被內建在瀏覽器並隱含在每個頁面中，在載入時就被解析並且執行。而在這個時間點我們就可以註冊我們希望能與使用者互動的事件，在第一輪執行過後，接下來的與我們設計之程式的互動都會用透過我們設定及註冊的 callback 來完成，不管是註冊像是滑鼠移動，計時器或畫格處理，瀏覽器處理時也不會完整的暴露該功能的 thread。（只使用不共享的網頁工作器）
 
 ### Stepping Through the Code(逐步了解程式碼)
 
@@ -103,6 +105,32 @@ An important difference between web applications and traditional desktop or serv
 
 這是程序式程式設計的 code style，而非物件導向或是函數式。這些的程式設計風格都可以做到一樣的事，不過可能會需要更多設定用程式碼和封裝來加在 DOM 已存在的東西之上，雖然最近有一個 Custom Elements 的功能可以輕易將 DOM 用物件導向的方式操作，在函數式 JavaScript 上也有很多優秀的寫法，但作者覺得這樣都有點卡腳，所以用程序式的方式去寫感覺是最簡單的。
 
-There are eight source files in this project, but index.html and blocks.css are basic structure and style for the app and won't be discussed. Two of the JavaScript files won't be discussed in any detail either: util.js contains some helpers and serves as a bridge between different browser implementations—similar to a library like jQuery but in less than 50 lines of code. file.js is a similar utility used for loading and saving files and serializing scripts.
+> There are eight source files in this project, but index.html and blocks.css are basic structure and style for the app and won't be discussed. Two of the JavaScript files won't be discussed in any detail either: util.js contains some helpers and serves as a bridge between different browser implementations—similar to a library like jQuery but in less than 50 lines of code. file.js is a similar utility used for loading and saving files and serializing scripts.
 
-An important difference between web applications and traditional desktop or server applications is the lack of a main() or other entry point. There is no explicit run loop because that is already built into the browser and implicit on every web page. All our code will be parsed and executed on load, at which point we can register for events we are interested in for interacting with the user. After the first run, all further interaction with our code will be through callbacks we set up and register, whether we register those for events (like mouse movement), timeouts (fired with the periodicity we specify), or frame handlers (called for each screen redraw, generally 60 frames per second). The browser does not expose full-featured threads either (only shared-nothing web workers).
+在這個專案中總共有八個原始檔，其中 `index.html` 和 `blocks.css` 是這個應用的基本結構和形式，這我們就不做討論了。還有兩個 JavaScript 的檔案我們也不會討論細節，其一是 `util.js` ，它包含了一些橋接不同瀏覽器實作的輔助和服務，是一個類似 jQuery 的函式庫但只有不到 50 行程式碼。`file.js` 則是一個類似前者的工具，它用
+來格式化指令、儲存或載入檔案。
+
+> Script Serialization 的意義為將指令轉換為可儲存或是取用的格式，詳細參見 [wiki](https://zh.wikipedia.org/wiki/%E5%BA%8F%E5%88%97%E5%8C%96)
+
+> These are the remaining files:
+> * block.js is the abstract representation of a block-based language.
+> * drag.js implements the key interaction of the language: allowing the user to drag blocks from a list of available blocks (the "menu") to assemble them into a program (the "script").
+> * menu.js has some helper code and is also responsible for actually running the user's program.
+> * turtle.js defines the specifics of our block language (turtle graphics) and initializes its specific blocks. This is the file that would be replaced in order to create a different block language.
+
+然後這些是剩下的檔案
+* block.js 是一個方塊式語言的抽象實現。
+    * 類似創建方塊、方塊本身、方塊內容、方塊執行......等抽象化的實現。
+* drag.js 實現這個語言的關鍵互動：允許使用者從可用方塊列表(就是選單)中拖拉方塊去組合他們成一個程式(拖拉的方塊就是指令)。
+* menu.js 有一些輔助用工具(用來取得 menuItem)並負責實際執行使用者設計的程式。
+* turtle.js 定義我們的方塊式語言的細節(turtle graphics)，並初始化對應的方塊，這就是那個可以被取代來創造其他方塊式語言的檔案。
+
+>`blocks.js`
+>
+> Each block consists of a few HTML elements, styled with CSS, with some JavaScript event handlers for dragging-and-dropping and modifying the input argument. The blocks.js file helps to create and manage these groupings of elements as single objects. When a type of block is added to the block menu, it is associated with a JavaScript function to implement the language, so each block in the script has to be able to find its associated function and call it when the script runs.
+![](http://aosabook.org/en/500L/blockcode-images/block.png)
+Figure 1.2 - An example block
+
+每個方塊由一些 HTML 元素及CSS 組成，此外還有一些 JavaScript 事件處理器來負責拖拉和輸入參數的部份，`blocks.js`這個檔案會協助處理創建跟將這一組一組的元素作為一個物件來管理，當一個類型為方塊的被加入方塊選單時，它會被關聯到一個 JavaScript 的函式來實作這個語言，所以在指令中的每個方塊都可以找到其關聯的函式並在運行時被呼叫。
+
+> Blocks have two optional bits of structure. They can have a single numeric parameter (with a default value), and they can be a container for other blocks. These are hard limits to work with, but would be relaxed in a larger system. In Waterbear there are also expression blocks which can be passed in as parameters; multiple parameters of a variety of types are supported. Here in the land of tight constraints we'll see what we can do with just one type of parameter.
