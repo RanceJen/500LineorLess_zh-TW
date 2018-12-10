@@ -16,7 +16,7 @@ Dethe 是一個 geek 父親、藝術性的 programmer、導師以及程式設計
 
 學習一個程式語言有時是一件困難的事，因為他們對於拼寫錯誤非常敏感。大部分的程式語言會有區分大小寫，模糊的語法，甚至連如果您在錯誤的地方寫上分號他們都會有拒絕運行，甚至在缺少分號時會更糟。更進一步來說，目前大部分的程式語言都是基於英文而且他們的語法並不能被本地化。
 
-> 註：他應該是指缺分號時很多語言常常會吐出亂七八糟的 Error message
+> 譯註：他應該是指缺分號時很多語言常常會吐出亂七八糟的 Error message
 
 > In contrast, a well-done block language can eliminate syntax errors completely. You can still create a program which does the wrong thing, but you cannot create one with the wrong syntax: the blocks just won't fit that way. Block languages are more discoverable: you can see all the constructs and libraries of the language right in the list of blocks. Further, blocks can be localized into any human language without changing the meaning of the programming language.
 
@@ -41,7 +41,7 @@ Figure 1.1 - The Blockcode IDE in use
 
 如果您想嘗試一下何為方塊式語言，您可以實驗一下本章節的程式，它的專案建置在作者之 github repository 中。
 
-> 註：turtle graphics 指的是上方圖示中的放射狀圖形
+> 譯註：turtle graphics 指的是上方圖示中的放射狀圖形
 
 ### Goals and Structure (目標與架構)
 
@@ -57,9 +57,9 @@ Figure 1.1 - The Blockcode IDE in use
 
 在我設計方塊式語言時有一件困擾我的事就是它的 IDE ，人們沒辦法在他喜好的文字編輯器上撰寫方塊是語言，該語言的 IDE 必須是與方塊是語言同時設計和開發的。這其實有利有弊，在好的一面來看，每個人都用相同的環境開發避免了爭論該用哪個編輯器的宗教戰爭，在壞的一面就是他會大幅分散設計方塊式語言的設計者開發時的心力。
 
-> 註：IDE 為 Integrated Development Environment ，中文稱「整合開發環境」，就是像 visual studio 之類的整合編輯器。
+> 譯註：IDE 為 Integrated Development Environment ，中文稱「整合開發環境」，就是像 visual studio 之類的整合編輯器。
 
-> 註2：所謂「設計方塊式語言的設計者」是指「實作出方塊式語言的人」，而非用方塊式語言來設計程式的使用者。
+> 譯註2：所謂「設計方塊式語言的設計者」是指「實作出方塊式語言的人」，而非用方塊式語言來設計程式的使用者。
 
 ### The Nature of Scripts (指令的本質)
 
@@ -67,9 +67,9 @@ Figure 1.1 - The Blockcode IDE in use
 
 Blockcode 的指令就像是任何（不管是方塊式還是文字式）語言的指令一樣，是一些可運算操作的組合，而在 Blockcode 之中的指令則是由迭代的 html 元素組成，他們與特定的 JavaScript 相關聯且在迭代到該方塊時執行，有些方塊可以包含其他的方塊（並且也負責執行他們），有些方塊可以把參數傳遞到實際執行的函式內。
  
-> 註：這邊 script 的意指「一個可運算的指令」，像是 `rm -rf /` 。
+> 譯註：這邊 script 的意指「一個可運算的指令」，像是 `rm -rf /` 。
 
-> 註2：可以包含其他方塊的方塊聽起來有點怪，但其實就是類似 for 這種東西，指令包指令，是不是很合理容易理解惹 ヽ(●´∀`●)ﾉ
+> 譯註2：可以包含其他方塊的方塊聽起來有點怪，但其實就是類似 for 這種東西，指令包指令，是不是很合理容易理解惹 ヽ(●´∀`●)ﾉ
 
 > In most (text-based) languages, a script goes through several stages: a lexer converts the text into recognized tokens, a parser organizes the tokens into an abstract syntax tree, then depending on the language the program may be compiled into machine code or fed into an interpreter. That's a simplification; there can be more steps. For Blockcode, the layout of the blocks in the script area already represents our abstract syntax tree, so we don't have to go through the lexing and parsing stages. We use the Visitor pattern to iterate over those blocks and call predefined JavaScript functions associated with each block to run the program.
 
@@ -92,6 +92,8 @@ Blockcode 的指令就像是任何（不管是方塊式還是文字式）語言�
 > An important difference between web applications and traditional desktop or server applications is the lack of a main() or other entry point. There is no explicit run loop because that is already built into the browser and implicit on every web page. All our code will be parsed and executed on load, at which point we can register for events we are interested in for interacting with the user. After the first run, all further interaction with our code will be through callbacks we set up and register, whether we register those for events (like mouse movement), timeouts (fired with the periodicity we specify), or frame handlers (called for each screen redraw, generally 60 frames per second). The browser does not expose full-featured threads either (only shared-nothing web workers).
 
 網頁應用程式和傳統桌面端或伺服器端應用之間的一個重要差別在於缺少 main() 或是其他的程式進入點，他並不會明確的「執行」，因為該流程已經被內建在瀏覽器並隱含在每個頁面中，在載入時就被解析並且執行。而在這個時間點我們就可以註冊我們希望能與使用者互動的事件，在第一輪執行過後，接下來的與我們設計之程式的互動都會用透過我們設定及註冊的 callback 來完成，不管是註冊像是滑鼠移動，計時器或畫格處理，瀏覽器處理時也不會完整的暴露該功能的 thread。（只使用不共享的網頁工作器）
+
+> 譯註： callback 指事件對應的特定函數調用，中國大陸一般翻譯為「回調」，我總覺得這樣翻很怪故保持原文。
 
 ### Stepping Through the Code(逐步了解程式碼)
 
@@ -134,3 +136,157 @@ Figure 1.2 - An example block
 每個方塊由一些 HTML 元素及CSS 組成，此外還有一些 JavaScript 事件處理器來負責拖拉和輸入參數的部份，`blocks.js`這個檔案會協助處理創建跟將這一組一組的元素作為一個物件來管理，當一個類型為方塊的被加入方塊選單時，它會被關聯到一個 JavaScript 的函式來實作這個語言，所以在指令中的每個方塊都可以找到其關聯的函式並在運行時被呼叫。
 
 > Blocks have two optional bits of structure. They can have a single numeric parameter (with a default value), and they can be a container for other blocks. These are hard limits to work with, but would be relaxed in a larger system. In Waterbear there are also expression blocks which can be passed in as parameters; multiple parameters of a variety of types are supported. Here in the land of tight constraints we'll see what we can do with just one type of parameter.
+
+方塊的結構中有兩個選填的部份，他們可以有一個數字的參數(並有帶有預設值)，以及他們可以變成另外其他方塊的容器，這些是我們運作上的硬性限制，但這在大型的系統上會被解除掉，在 Waterbear 中就有表達式的方塊可以被當作參數傳入，並支援多種的參數型態，在這種較為緊縮的架構下，我們可以看到有什麼事是只要一種型態的參數就可以做到的。
+
+```
+<!-- The HTML structure of a block -->
+<div class="block" draggable="true" data-name="Right">
+    Right
+    <input type="number" value="5">
+    degrees
+</div>
+```
+
+> It's important to note that there is no real distinction between blocks in the menu and blocks in the script. Dragging treats them slightly differently based on where they are being dragged from, and when we run a script it only looks at the blocks in the script area, but they are fundamentally the same structures, which means we can clone the blocks when dragging from the menu into the script.
+>
+> The createBlock(name, value, contents) function returns a block as a DOM element populated with all internal elements, ready to insert into the document. This can be used to create blocks for the menu, or for restoring script blocks saved in files or localStorage. While it is flexible this way, it is built specifically for the Blockcode "language" and makes assumptions about it, so if there is a value it assumes the value represents a numeric argument and creates an input of type "number". Since this is a limitation of the Blockcode, this is fine, but if we were to extend the blocks to support other types of arguments, or more than one argument, the code would have to change.
+
+要提到有一點很重要的就是，其實選單上的方塊跟指令區的方塊實際上並沒有差別，拖曳會讓他們有一點不同在「從哪裡來」這點上，而當你運行指令時則只看指令區內的方塊，但從根本上來看他們都是一樣的結構，這代表當你從選單拖曳方塊時到指令區時可以複製方塊。
+
+`createBlock(name,value,contents)` 這個函式回傳一個包含所有內部要素的 DOM 元素，並準備被插入這個文件，這可以用來為選單創造一個方塊，或是恢復儲存在檔案或是本地空間的指令方塊，雖然這種做法很彈性，但這是特別為 blockcode 這個語言假設並且建構的，所以這裡假設了值一定是由數字的形式作為參數，並且創建一個 "number" 型態的輸入。這就是 Blockcode 的限制，這是可以接受的，但如果要有擴展的方塊可支援其他型態的參數，或是多於一個的參數，則程式碼就要做改動。
+
+```
+    function createBlock(name, value, contents){
+        var item = elem('div',
+            {'class': 'block', draggable: true, 'data-name': name},
+            [name]
+        );
+        if (value !== undefined && value !== null){
+            item.appendChild(elem('input', {type: 'number', value: value}));
+        }
+        if (Array.isArray(contents)){
+            item.appendChild(
+                elem('div', {'class': 'container'}, contents.map(function(block){
+                return createBlock.apply(null, block);
+            })));
+        }else if (typeof contents === 'string'){
+            // Add units (degrees, etc.) specifier
+            item.appendChild(document.createTextNode(' ' + contents));
+        }
+        return item;
+    }
+```
+
+> We have some utilities for handling blocks as DOM elements:
+> * `blockContents(block)` retrieves the child blocks of a container block. It always returns a list if called on a container block, and always returns null on a simple block
+> * `blockValue(block)` returns the numerical value of the input on a block if the block has an input field of type number, or null if there is no input element for the block
+> * `blockScript(block)` will return a structure suitable for serializing with JSON, to save blocks in a form they can easily be restored from
+> * `runBlocks(blocks)` is a handler that runs each block in an array of blocks
+
+我們有一些工具可將方塊作為 DOM 元素處理：
+* `blockContents(block)` 檢索一個容器式方塊的子方塊，如果輸入的是一個容器式方塊則它回傳一個子方塊的列表，反之則回傳 null 。
+* `blockValue(block)` 如果方塊有輸入區塊的話，以數字型態回傳輸入方塊內的值，反之則回傳 null 。
+* `blockScript(block)` 回傳一個方塊結構序列化後的 JSON ，用來格式化儲存方塊，同時也可以輕鬆的被還原。
+* `runBlocks(blocks)` 是一個處理器用來執行 blocks 這個陣列中的各個方塊
+```
+function blockContents(block){
+        var container = block.querySelector('.container');
+        return container ? [].slice.call(container.children) : null;
+    }
+
+    function blockValue(block){
+        var input = block.querySelector('input');
+        return input ? Number(input.value) : null;
+    }
+
+    function blockUnits(block){
+        if (block.children.length > 1 &&
+            block.lastChild.nodeType === Node.TEXT_NODE &&
+            block.lastChild.textContent){
+            return block.lastChild.textContent.slice(1);
+        }
+    }
+
+    function blockScript(block){
+        var script = [block.dataset.name];
+        var value = blockValue(block);
+        if (value !== null){
+            script.push(blockValue(block));
+        }
+        var contents = blockContents(block);
+        var units = blockUnits(block);
+        if (contents){script.push(contents.map(blockScript));}
+        if (units){script.push(units);}
+        return script.filter(function(notNull){ return notNull !== null; });
+    }
+
+    function runBlocks(blocks){
+        blocks.forEach(function(block){ trigger('run', block); });
+    }
+```
+
+> `drag.js`
+> 
+> The purpose of `drag.js` is to turn static blocks of HTML into a dynamic programming language by implementing interactions between the menu section of the view and the script section. The user builds their program by dragging blocks from the menu into the script, and the system runs the blocks in the script area.
+
+`drag.js` 的目的在於將靜態的 HTML 方塊轉換成動態的程式設計語言，藉由實作選單區塊和指令區塊的視覺互動，使用者就可以從選單區拖曳方塊到指令區來建構他們的程式，更讓系統可以運行指令區的方塊。
+
+> We're using HTML5 drag-and-drop; the specific JavaScript event handlers it requires are defined here. (For more information on using HTML5 drag-and-drop, see Eric Bidleman's article.) While it is nice to have built-in support for drag-and-drop, it does have some oddities and some pretty major limitations, like not being implemented in any mobile browser at the time of this writing.
+>
+> We define some variables at the top of the file. When we're dragging, we'll need to reference these from different stages of the dragging callback dance.
+
+我們使用的是 HTML5 的拖放功能，指定的 JavaScript 事件處理器需要被定義在這(更多的 HTML5 拖放功能可見[Eric Bidleman 的主題說明](http://www.html5rocks.com/en/tutorials/dnd/basics/))。
+雖然有內建的拖拉功能是一件好事，但這它同時也有一些奇怪且重要的限制，像是這功能「目前」並沒有在任何手機瀏覽器上被實作。(「目前」指 2016 年該作者寫文章的當下)
+
+我們在檔案的頂部定義了一些數值，我們在拖曳的不同階段呼叫 callback 時會需要引用他們。
+```
+    var dragTarget = null; // Block we're dragging
+    var dragType = null; // Are we dragging from the menu or from the script?
+    var scriptBlocks = []; // Blocks in the script, sorted by position
+```
+
+> Depending on where the drag starts and ends, drop will have different effects:
+>
+> * If dragging from script to menu, delete `dragTarget` (remove block from script).
+> * If dragging from script to script, move `dragTarget` (move an existing script block).
+> * If dragging from menu to script, copy `dragTarget` (insert new block in script).
+> * If dragging from menu to menu, do nothing.
+>
+> During the `dragStart(evt)` handler we start tracking whether the block is being copied from the menu or moved from (or within) the script. We also grab a list of all the blocks in the script which are not being dragged, to use later. The evt.dataTransfer.setData call is used for dragging between the browser and other applications (or the desktop), which we're not using, but have to call anyway to work around a bug.
+
+有鑑於拖曳的起點終點不同，最終放下方塊時會有以下不同的效果。
+* 如果從指令區拖曳到選單區，刪除 `dragTarget` (從指令區刪除該方塊)
+* 如果從指令區拖曳到指令區，移動 `dragTarget` (移動已存在的方塊)
+* 如果從選單區拖曳到指令區，複製 `dragTarget` (插入新方塊到指令區)
+* 如果從選單區拖曳到選單區，啥都不做。
+
+在 `dragStart(evt)` 這個處理器之中我們會追蹤不管是從選單區被複製或是從指令區被移動的方塊。我們同時也會抓取一個在指令區所有沒被拖曳之方塊的列表留待後續使用， `evt.dataTransfer.setData` 這個呼叫是用在瀏覽器與其他應用交互拖曳物件時，這部份我們沒有使用，但不管怎樣都要呼叫它避免 bug。
+
+> 譯註：bug 指程式漏洞或問題。
+```
+    function dragStart(evt){
+        if (!matches(evt.target, '.block')) return;
+        if (matches(evt.target, '.menu .block')){
+            dragType = 'menu';
+        }else{
+            dragType = 'script';
+        }
+        evt.target.classList.add('dragging');
+        dragTarget = evt.target;
+        scriptBlocks = [].slice.call(
+            document.querySelectorAll('.script .block:not(.dragging)'));
+        // For dragging to take place in Firefox, we have to set this, even if
+        // we don't use it
+        evt.dataTransfer.setData('text/html', evt.target.outerHTML);
+        if (matches(evt.target, '.menu .block')){
+            evt.dataTransfer.effectAllowed = 'copy';
+        }else{
+            evt.dataTransfer.effectAllowed = 'move';
+        }
+    }
+```
+
+> While we are dragging, the `dragenter`, `dragover`, and `dragout` events give us opportunities to add visual cues by highlighting valid drop targets, etc. Of these, we only make use of `dragover`.
+
+當我們在拖曳時，`dragenter`、`dragover` 和 `dragout` 事件讓我們有辦法做到「用視覺上的提示來突顯出我們正在拖曳的目標」......之類的功能，其中這我們只用到 `dragover` 的部份。
