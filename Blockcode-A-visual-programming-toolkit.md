@@ -187,7 +187,7 @@ Figure 1.2 - An example block
 我們有一些工具可將方塊作為 DOM 元素處理：
 * `blockContents(block)` 檢索一個容器式方塊的子方塊，如果輸入的是一個容器式方塊則它回傳一個子方塊的列表，反之則回傳 null 。
 * `blockValue(block)` 如果方塊有輸入區塊的話，以數字型態回傳輸入方塊內的值，反之則回傳 null 。
-* `blockScript(block)` 回傳一個方塊結構序列化後的 JSON ，用來格式化儲存方塊，同時也可以輕鬆的被還原。
+* `blockScript(block)` 回傳一個方塊結構用以序列化成 JSON ，用來格式化儲存方塊，同時也可以輕鬆的被還原。
 * `runBlocks(blocks)` 是一個處理器用來執行 blocks 這個陣列中的各個方塊
 ```
 function blockContents(block){
@@ -261,7 +261,7 @@ function blockContents(block){
 * 如果從選單區拖曳到指令區，複製 `dragTarget` (插入新方塊到指令區)
 * 如果從選單區拖曳到選單區，啥都不做。
 
-在 `dragStart(evt)` 這個處理器之中我們會追蹤不管是從選單區被複製或是從指令區被移動的方塊。我們同時也會抓取一個在指令區所有沒被拖曳之方塊的列表留待後續使用， `evt.dataTransfer.setData` 這個呼叫是用在瀏覽器與其他應用交互拖曳物件時，這部份我們沒有使用，但不管怎樣都要呼叫它避免 bug。
+在 `dragStart(evt)` 這個處理器之中我們會追蹤不管是從選單區被複製或是從指令區被移動的方塊。我們同時也會抓取一個在指令區所有沒被拖曳之方塊的列表留待後續使用， `evt.dataTransfer.setData` 這個呼叫是用在瀏覽器與其他應用交互拖曳物件時，這部份我們沒有使用，但不管怎樣都要呼叫它來避免一個 bug。
 
 > 譯註：bug 指程式漏洞或問題。
 ```
@@ -289,4 +289,154 @@ function blockContents(block){
 
 > While we are dragging, the `dragenter`, `dragover`, and `dragout` events give us opportunities to add visual cues by highlighting valid drop targets, etc. Of these, we only make use of `dragover`.
 
-當我們在拖曳時，`dragenter`、`dragover` 和 `dragout` 事件讓我們有辦法做到「用視覺上的提示來突顯出我們正在拖曳的目標」......之類的功能，其中這我們只用到 `dragover` 的部份。
+當我們在拖曳時，`dragenter`、`dragover` 和 `dragout` 事件讓我們有辦法做到「用視覺上的提示來突顯出我們放置的目標」......之類的功能，其中這我們只用到 `dragover` 的部份。
+```
+    function dragOver(evt){
+        if (!matches(evt.target, '.menu, .menu *, .script, .script *, .content')) {
+            return;
+        }
+        // Necessary. Allows us to drop.
+        if (evt.preventDefault) { evt.preventDefault(); }
+        if (dragType === 'menu'){
+            // See the section on the DataTransfer object.
+            evt.dataTransfer.dropEffect = 'copy';  
+        }else{
+            evt.dataTransfer.dropEffect = 'move';
+        }
+        return false;
+    }
+```
+
+> When we release the mouse, we get a `drop` event. This is where the magic happens. We have to check where we dragged from (set back in `dragStart`) and where we have dragged to. Then we either copy the block, move the block, or delete the block as needed. We fire off some custom events using `trigger()` (defined in `util.js`) for our own use in the block logic, so we can refresh the script when it changes.
+
+當我們放開拖曳的滑鼠按鍵時會取得一個放下事件，這就是魔法發生的時機點。我們要先去檢查方塊是從何處被拖曳過來的，然後放置在什麼區域。然後視需求看要複製、移動還是刪除這個方塊。藉由`trigger()`(定義在 `util.js`)來為了我們的方塊邏輯啟動一些客製化的事件，所以我們就可以當它改動時刷新指令的部份。
+```
+    function drop(evt){
+        if (!matches(evt.target, '.menu, .menu *, .script, .script *')) return;
+        var dropTarget = closest(
+            evt.target, '.script .container, .script .block, .menu, .script');
+        var dropType = 'script';
+        if (matches(dropTarget, '.menu')){ dropType = 'menu'; }
+        // stops the browser from redirecting.
+        if (evt.stopPropagation) { evt.stopPropagation(); }
+        if (dragType === 'script' && dropType === 'menu'){
+            trigger('blockRemoved', dragTarget.parentElement, dragTarget);
+            dragTarget.parentElement.removeChild(dragTarget);
+        }else if (dragType ==='script' && dropType === 'script'){
+            if (matches(dropTarget, '.block')){
+                dropTarget.parentElement.insertBefore(
+                    dragTarget, dropTarget.nextSibling);
+            }else{
+                dropTarget.insertBefore(dragTarget, dropTarget.firstChildElement);
+            }
+            trigger('blockMoved', dropTarget, dragTarget);
+        }else if (dragType === 'menu' && dropType === 'script'){
+            var newNode = dragTarget.cloneNode(true);
+            newNode.classList.remove('dragging');
+            if (matches(dropTarget, '.block')){
+                dropTarget.parentElement.insertBefore(
+                    newNode, dropTarget.nextSibling);
+            }else{
+                dropTarget.insertBefore(newNode, dropTarget.firstChildElement);
+            }
+            trigger('blockAdded', dropTarget, newNode);
+        }
+    }
+```
+
+> The `dragEnd(evt)` is called when we mouse up, but after we handle the `drop` event. This is where we can clean up, remove classes from elements, and reset things for the next drag.
+
+而 `dragEnd(evt)` 會在滑鼠按鍵被放開的時候呼叫，但會在我們處理前敘的 `drop` 之後，這是我們用來清理的部份，將相關的類別移除(像是 'dragging' )，並重設各項東西來準備下一次的拖曳。
+```
+    function _findAndRemoveClass(klass){
+        var elem = document.querySelector('.' + klass);
+        if (elem){ elem.classList.remove(klass); }
+    }
+
+    function dragEnd(evt){
+        _findAndRemoveClass('dragging');
+        _findAndRemoveClass('over');
+        _findAndRemoveClass('next');
+    }
+```
+
+> `menu.js`
+>
+> The file `menu.js` is where blocks are associated with the functions that are called when they run, and contains the code for actually running the script as the user builds it up. Every time the script is modified, it is re-run automatically.
+> 
+> "Menu" in this context is not a drop-down (or pop-up) menu, like in most applications, but is the list of blocks you can choose for your script. This file sets that up, and starts the menu off with a looping block that is generally useful (and thus not part of the turtle language itself). This is kind of an odds-and-ends file, for things that may not fit anywhere else.
+
+`menu.js` 這個檔案用來關聯方塊與其運行時呼叫函式的，並有著使用者實際建構時會運行的程式碼，每一次指令有更動時，它都會自動重新運行。
+
+此上下文中的 "Menu" 並不是像大多數應用中戳一下就會彈出來的下拉式選單，而是一個用來讓使用者選擇指令的方塊列表。這個檔案用來設置好選單區並使它以一個通用的迴圈方塊作為開頭(由於迴圈的概念是通用的，所以他不是 turtle 語言的一部分)，這是一個比較東拼西湊的文件，用來整理一些放那都不太對的東西。
+
+> Having a single file to gather random functions in is useful, especially when an architecture is under development. My theory of keeping a clean house is to have designated places for clutter, and that applies to building a program architecture too. One file or module becomes the catch-all for things that don't have a clear place to fit in yet. As this file grows it is important to watch for emerging patterns: several related functions can be spun off into a separate module (or joined together into a more general function). You don't want the catch-all to grow indefinitely, but only to be a temporary holding place until you figure out the right way to organize the code.
+
+有一個檔案可以收集一些散亂的函式是很實用的，尤其是在開發中的架構上，我維持房子乾淨的理論就是要有一個特定的地點放雜物，這同時也可以應用在程式架構上。一個檔案或是模組當收集者來管理全部沒有明確歸屬的東西。當檔案不斷變大時，切記要注意他成長的方向：像是一些有相關性的函式可以被分離成一個模組(或是組合成一個更為通用的函式)，你並不會想要這個收集者無限增大，而應該只是在你組織好程式之前的一個臨時放置處。
+
+> We keep around references to `menu` and `script` because we use them a lot; no point hunting through the DOM for them over and over. We'll also use `scriptRegistry`, where we store the scripts of blocks in the menu. We use a very simple name-to-script mapping which does not support either multiple menu blocks with the same name or renaming blocks. A more complex scripting environment would need something more robust.
+> 
+> We use `scriptDirty` to keep track of whether the script has been modified since the last time it was run, so we don't keep trying to run it constantly.
+
+我們會保留 `menu` 和 `script` 兩者的引用是因為他們常常被使用，沒必要一次又一次的重新透過 DOM 搜索它們，我們還使用 `scriptRegistry` 來保存選單上方塊的實際指令，其會做簡單的名稱對應指令。而這樣做就不支援多個選單上的方塊擁有同一名稱或是重新命名方塊，在指令更為複雜的情況下我們會需要更具穩健性的處理方式。
+
+我們使用 `scriptDirty` 來追蹤看至指令區在上次運行後有沒有改變，這樣我們就不會嘗試重複運行它。
+
+>譯註：BlockCode 在拉方塊上去後會自動執行並秀出新的運行結果，每次改變時都會自動運行，所以才會有上面那句解釋。
+```
+    var menu = document.querySelector('.menu');
+    var script = document.querySelector('.script');
+    var scriptRegistry = {};
+    var scriptDirty = false;
+```
+
+> When we want to notify the system to run the script during the next frame handler, we call `runSoon()` which sets the `scriptDirty ` flag to `true`. The system calls `run()` on every frame, but returns immediately unless `scriptDirty` is set. When `scriptDirty` is set, it runs all the script blocks, and also triggers events to let the specific language handle any tasks it needs before and after the script is run. This decouples the blocks-as-toolkit from the turtle language to make the blocks re-usable (or the language pluggable, depending how you look at it).
+
+當我們想要通知系統在下一幀開始運行指令，會呼叫 `runSoon()` 來設置 `scriptDirty` 的標誌為 `true` 。 系統每一幀都會自動呼叫 `run()`，但在 `scriptDirty` 非 `true` 時會立即回傳，而當 `scriptDirty` 為 `true` 時，就執行所有的指令方塊，並觸發對應事件來讓特定的語言處理「指令運行前後」要做的事(像是編譯之類的)。這就將方塊本身從 turtle 語言中解耦出來成一種工具包，使得「方塊本身是可以被再利用」的(看你要從什麼角度來看，也可以說成是「可以被擴充在語言之上」的)。
+
+> As part of running the script, we iterate over each block, calling `runEach(evt)` on it, which sets a class on the block, then finds and executes its associated function. If we slow things down, you should be able to watch the code execute as each block highlights to show when it is running.
+>
+> The `requestAnimationFrame` method below is provided by the browser for animation. It takes a function which will be called for the next frame to be rendered by the browser (at 60 frames per second) after the call is made. How many frames we actually get depends on how fast we can get work done in that call.
+
+在運行指令的部份，我們會迭代所有方塊，呼叫其之 `runEach(evt)` ，它會在方塊上設置一個類別，然後找到並運行其對應的函式，如果我們把整件事的過程放慢，你就可以看到程式碼運行時會突顯該運行方塊。
+
+下面的 `requestAnimationFrame` 這個是瀏覽器為動畫提供的方法，它呼叫後接收一個渲染下一幀時要被呼叫的函式給瀏覽器(通常是一秒 60 幀)，而實際幀數取決於我們的工作可以被執行的多快。
+```
+    function runSoon(){ scriptDirty = true; }
+
+    function run(){
+        if (scriptDirty){
+            scriptDirty = false;
+            Block.trigger('beforeRun', script);
+            var blocks = [].slice.call(
+                document.querySelectorAll('.script > .block'));
+            Block.run(blocks);
+            Block.trigger('afterRun', script);
+        }else{
+            Block.trigger('everyFrame', script);
+        }
+        requestAnimationFrame(run);
+    }
+    requestAnimationFrame(run);
+
+    function runEach(evt){
+        var elem = evt.target;
+        if (!matches(elem, '.script .block')) return;
+        if (elem.dataset.name === 'Define block') return;
+        elem.classList.add('running');
+        scriptRegistry[elem.dataset.name](elem);
+        elem.classList.remove('running');
+    }
+```
+
+> We add blocks to the menu using `menuItem(name, fn, value, contents)` which takes a normal block, associates it with a function, and puts in the menu column.
+
+我們將方塊增加到選單時使用 `menuItem(name, fn, value, contents)` ，它會接收一個普通的方塊，將其與對應函式關聯起來，並放到選單區的欄位上。
+```
+    function menuItem(name, fn, value, units){
+        var item = Block.create(name, value, units);
+        scriptRegistry[name] = fn;
+        menu.appendChild(item);
+        return item;
+    }
+```
