@@ -471,3 +471,7 @@ Turtle programming 是一種圖形程式設計的方法，由 Logo 這個語言�
 > In this version of turtle graphics we have a few extra blocks. Technically we don't need both `turn right` and `turn left` because you can have one and get the other with negative numbers. Likewise `move back` can be done with `move forward` and negative numbers. In this case it felt more balanced to have both.
 
 在這個版本中我們其實有幾個多餘的方塊，像是技術上是不需要同時存在 `turn right` 和 `turn left` 的，因為對應的另外一個可以用負值來做到相同效果，相同的 `move back` 也可以用負值的 `move forward` 來做到。但我覺得在這邊這幾個種同時存在感覺比較平衡。
+
+> The image above was formed by putting two loops inside another loop and adding a move forward and turn right to each loop, then playing with the parameters interactively until I liked the image that resulted.
+
+上方的圖片是由一個迴圈內部在加上兩個向前並右轉的迴圈組成，並且調整參數運行到我覺得滿意為止所得到的圖案。
