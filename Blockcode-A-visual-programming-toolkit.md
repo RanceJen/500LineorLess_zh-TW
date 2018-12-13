@@ -440,3 +440,34 @@ function blockContents(block){
         return item;
     }
 ```
+
+> We define `repeat(block)` here, outside of the turtle language, because it is generally useful in different languages. If we had blocks for conditionals and reading and writing variables they could also go here, or into a separate trans-language module, but Right now we only have one of these general-purpose blocks defined.
+
+我們也將 `repeat(block)` 定義在這裡，而非 turtle 語言之中，因為 `repeat(block)` 是非常通用於所有語言的。如果我們有一些條件語句、讀寫值之類的也可以放在這，或是分離成一個轉換語言用的模組，但目前為止我們只有這一個通用於方塊上的方法要定義。
+```
+    function repeat(block){
+        var count = Block.value(block);
+        var children = Block.contents(block);
+        for (var i = 0; i < count; i++){
+            Block.run(children);
+        }
+    }
+    menuItem('Repeat', repeat, 10, []);
+```
+
+> `turtle.js`
+>
+> `turtle.js` is the implementation of the turtle block language. It exposes no functions to the rest of the code, so nothing else can depend on it. This way we can swap out the one file to create a new block language and know nothing in the core will break.
+
+`turtle.js` 是 turtle 方塊語言的實現，它本身並沒有向其他任何程式碼公開自己的函數，所以也不會有任何東西依賴於其，這樣我們才能替換掉這個檔案來創造新的方塊式語言而不會使核心的部份無法運作。
+
+![](http://aosabook.org/en/500L/blockcode-images/turtle_example.png)
+Figure 1.3 - Example of Turtle code running
+
+> Turtle programming is a style of graphics programming, first popularized by Logo, where you have an imaginary turtle carrying a pen walking on the screen. You can tell the turtle to pick up the pen (stop drawing, but still move), put the pen down (leaving a line everywhere it goes), move forward a number of steps, or turn a number of degrees. Just those commands, combined with looping, can create amazingly intricate images.
+
+Turtle programming 是一種圖形程式設計的方法，由 Logo 這個語言而開始被人們了解，你可以想像成一隻烏龜咬著筆在螢幕上行走。你可以告訴這個烏龜收起筆(停止劃線，但依然移動)，或是拿出筆(在行走得路徑上留下軌跡線)、要向前走幾步路、或是轉向幾度。只需要上敘指令配上迴圈，就可以畫出非常精美且錯綜複雜的圖形。
+
+> In this version of turtle graphics we have a few extra blocks. Technically we don't need both `turn right` and `turn left` because you can have one and get the other with negative numbers. Likewise `move back` can be done with `move forward` and negative numbers. In this case it felt more balanced to have both.
+
+在這個版本中我們其實有幾個多餘的方塊，像是技術上是不需要同時存在 `turn right` 和 `turn left` 的，因為對應的另外一個可以用負值來做到相同效果，相同的 `move back` 也可以用負值的 `move forward` 來做到。但我覺得在這邊這幾個種同時存在感覺比較平衡。
