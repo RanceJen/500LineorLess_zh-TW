@@ -677,7 +677,7 @@ Turtle programming 是一種圖形程式設計的方法，由 Logo 這個語言�
 
 建構一個大型系統的小型版本讓我們可以專注於真正重要的部份。思考是否有一些因為歷史因素留下來的無用資料？(更甚是偏離目的的資料)，是否有一些根本沒人用的功能但卻要花心力維護的部份？是否使用者界面可以再做改進？這些都是重做一個小型版本時可以捫心自問的好問題。有一些重大的改變像是重新編排布局這種事就可以直接嘗試看看，不用擔心在複雜系統上會有的一連串影響。甚至後續可以當做重構一個複雜系統的實作指南。
 
-####A Program is a Process, Not a Thing(這個程式仍在進行式)
+#### A Program is a Process, Not a Thing(這個程式仍在進行式)
 
 > There are things I wasn't able to experiment with in the scope of this project that I may use the blockcode codebase to test out in the future. It would be interesting to create "function" blocks which create new blocks out of existing blocks. Implementing undo/redo would be simpler in a constrained environment. Making blocks accept multiple arguments without radically expanding the complexity would be useful. And finding various ways to share block scripts online would bring the webbiness of the tool full circle.
 
