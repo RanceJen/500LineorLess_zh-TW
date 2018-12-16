@@ -475,3 +475,210 @@ Turtle programming 是一種圖形程式設計的方法，由 Logo 這個語言�
 > The image above was formed by putting two loops inside another loop and adding a move forward and turn right to each loop, then playing with the parameters interactively until I liked the image that resulted.
 
 上方的圖片是由一個迴圈內部在加上兩個向前並右轉的迴圈組成，並且調整參數運行到我覺得滿意為止所得到的圖案。
+```
+    var PIXEL_RATIO = window.devicePixelRatio || 1;
+    var canvasPlaceholder = document.querySelector('.canvas-placeholder');
+    var canvas = document.querySelector('.canvas');
+    var script = document.querySelector('.script');
+    var ctx = canvas.getContext('2d');
+    var cos = Math.cos, sin = Math.sin, sqrt = Math.sqrt, PI = Math.PI;
+    var DEGREE = PI / 180;
+    var WIDTH, HEIGHT, position, direction, visible, pen, color;
+```
+> The `reset()` function clears all the state variables to their defaults. If we were to support multiple turtles, these variables would be encapsulated in an object. We also have a utility, `deg2rad(deg)`, because we work in degrees in the UI, but we draw in radians. Finally, `drawTurtle()` draws the turtle itself. The default turtle is simply a triangle, but you could override this to draw a more aesthetically-pleasing turtle.
+
+`reset()` 函式會清除所有的狀態設定值為預設值，如果我們支援存在多個畫圖烏龜，則這些設定值會被封裝成一個物件。我們同時也有一個工具，`deg2rad(deg)` 能將角度轉換為弧度，因為我們畫圖時實際上用的是弧度。最後 `drawTurtle()` 繪畫出烏龜本身，預設的烏龜是個簡單的三角形，不過你可以嘗試覆寫它來畫出一個更美觀的烏龜。
+
+> Note that `drawTurtle` uses the same primitive operations that we define to implement the turtle drawing. Sometimes you don't want to reuse code at different abstraction layers, but when the meaning is clear it can be a big win for code size and performance.
+
+注意到 `drawTurtle` 其實是用我們先前定義的基本操作來實現，雖然有時候你並不想在不同的抽象層中混用程式碼，但當行為非常明確時這樣做對程式的大小跟效能都會有獲益。
+
+```
+    function reset(){
+        recenter();
+        direction = deg2rad(90); // facing "up"
+        visible = true;
+        pen = true; // when pen is true we draw, otherwise we move without drawing
+        color = 'black';
+    }
+
+    function deg2rad(degrees){ return DEGREE * degrees; }
+
+    function drawTurtle(){
+        var userPen = pen; // save pen state
+        if (visible){
+            penUp(); _moveForward(5); penDown();
+            _turn(-150); _moveForward(12);
+            _turn(-120); _moveForward(12);
+            _turn(-120); _moveForward(12);
+            _turn(30);
+            penUp(); _moveForward(-5);
+            if (userPen){
+                penDown(); // restore pen state
+            }
+        }
+    }
+```
+
+> We have a special block to draw a circle with a given radius at the current mouse position. We special-case `drawCircle` because, while you can certainly draw a circle by repeating `MOVE 1 RIGHT 1` 360 times, controlling the size of the circle is very difficult that way.
+
+我們有一個特殊的方塊來畫一個給定半徑的圓圈在當前指標的位置上，我們將 `drawCircle` 當成一個特殊案例是因為如果用  `MOVE 1 RIGHT 1` 重複 360 次的方式來畫圓，他的大小會非常難掌握。
+```
+    function drawCircle(radius){
+        // Math for this is from http://www.mathopenref.com/polygonradius.html
+        var userPen = pen; // save pen state
+        if (visible){
+            penUp(); _moveForward(-radius); penDown();
+            _turn(-90);
+            var steps = Math.min(Math.max(6, Math.floor(radius / 2)), 360);
+            var theta = 360 / steps;
+            var side = radius * 2 * Math.sin(Math.PI / steps);
+            _moveForward(side / 2);
+            for (var i = 1; i < steps; i++){
+                _turn(theta); _moveForward(side);
+            }
+            _turn(theta); _moveForward(side / 2);
+            _turn(90);
+            penUp(); _moveForward(radius); penDown();
+            if (userPen){
+                penDown(); // restore pen state
+            }
+        }
+    }
+```
+
+> Our main primitive is `moveForward`, which has to handle some elementary trigonometry and check whether the pen is up or down.
+
+我們的主要的基礎操作是 `moveForward`，它的實現必須處理一些基礎的三角函數，並確認筆是提起還是放下的。
+
+```
+    function _moveForward(distance){
+        var start = position;
+        position = {
+            x: cos(direction) * distance * PIXEL_RATIO + start.x,
+            y: -sin(direction) * distance * PIXEL_RATIO + start.y
+        };
+        if (pen){
+            ctx.lineStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(position.x, position.y);
+            ctx.stroke();
+        }
+    }
+```
+
+> Most of the rest of the turtle commands can be easily defined in terms of what we've built above.
+
+大部分剩下的是對烏龜的操作，可以根據我們上面建構的內容來輕鬆的定義。
+
+```
+    function penUp(){ pen = false; }
+    function penDown(){ pen = true; }
+    function hideTurtle(){ visible = false; }
+    function showTurtle(){ visible = true; }
+    function forward(block){ _moveForward(Block.value(block)); }
+    function back(block){ _moveForward(-Block.value(block)); }
+    function circle(block){ drawCircle(Block.value(block)); }
+    function _turn(degrees){ direction += deg2rad(degrees); }
+    function left(block){ _turn(Block.value(block)); }
+    function right(block){ _turn(-Block.value(block)); }
+    function recenter(){ position = {x: WIDTH/2, y: HEIGHT/2}; }
+```
+
+> When we want a fresh slate, the `clear` function restores everything back to where we started.
+
+當我們想刷新畫板，`clear` 會還原所有東西到起始狀態。
+
+```
+    function clear(){
+        ctx.save();
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0,0,WIDTH,HEIGHT);
+        ctx.restore();
+        reset();
+        ctx.moveTo(position.x, position.y);
+    }
+```
+
+> When this script first loads and runs, we use our `reset` and `clear` to initialize everything and draw the turtle.
+
+當這個指令被第一次載入跟執行的時候，我們使用 `reset` 和 `clear` 來初始化所有事物並畫出烏龜。
+
+```
+    onResize();
+    clear();
+    drawTurtle();
+```
+
+> Now we can use the functions above, with the `Menu.item` function from `menu.js`, to make blocks for the user to build scripts from. These are dragged into place to make the user's programs.
+
+現在我們可以用這些函式，搭配來自 `menu.js` 的 `Menu.item` 來製作出方塊給使用者拖曳以建構程式用的指令方塊。
+
+```
+    Menu.item('Left', left, 5, 'degrees');
+    Menu.item('Right', right, 5, 'degrees');
+    Menu.item('Forward', forward, 10, 'steps');
+    Menu.item('Back', back, 10, 'steps');
+    Menu.item('Circle', circle, 20, 'radius');
+    Menu.item('Pen up', penUp);
+    Menu.item('Pen down', penDown);
+    Menu.item('Back to center', recenter);
+    Menu.item('Hide turtle', hideTurtle);
+    Menu.item('Show turtle', showTurtle);
+```
+
+## Lessons Learned(學習課題)
+
+### Why Not Use MVC?(為和不用 MVC 架構？)
+
+> Model-View-Controller (MVC) was a good design choice for Smalltalk programs in the '80s and it can work in some variation or other for web apps, but it isn't the right tool for every problem. All the state (the "model" in MVC) is captured by the block elements in a block language anyway, so replicating it into Javascript has little benefit unless there is some other need for the model (if we were editing shared, distributed code, for instance).
+
+模組-視圖-控制器(MVC) 是 80 年代用於短暫交互用應用程式的優質設計選擇，而其也有一些不同的改良為網頁應用之運用方式，但他並不適用於所有的程式上。在方塊式語言中所有的狀態 (也就是 MVC 中的 model) 都是由方塊元素組成，所以將 MVC 模式帶進來的效益很低，除非你還有其他模組的需求(像是如果要共同編輯同一份分散式的程式碼，那會需要同步的模組之類的)。
+
+> An early version of Waterbear went to great lengths to keep the model in JavaScript and sync it with the DOM, until I noticed that more than half the code and 90% of the bugs were due to keeping the model in sync with the DOM. Eliminating the duplication allowed the code to be simpler and more robust, and with all the state on the DOM elements, many bugs could be found simply by looking at the DOM in the developer tools. So in this case there is little benefit to building further separation of MVC than we already have in HTML/CSS/JavaScript.
+
+在早期的 Waterbear 架構成長的很龐大，就為了保持 JavaScript 中的模組與 DOM k
+同步，直到我理解到超過一半的程式碼跟 90％ 以上的 bug 都來自模組跟 DOM 的同步上。消除這種複製並同步的機制後，反而讓程式碼更加的簡潔和強健。且在所有狀態都保持在 DOM 元素後，很多的 bug 看開發者工具中的 DOM 就可以找到。所以在這個案例中在HTML/CSS/JavaScript 的基礎上再把架構分割成 MVC 的效益不大。
+
+### Toy Changes Can Lead to Real Changes(在玩具上的改變可以引導到實際上)
+
+> Building a small, tightly scoped version of the larger system I work on has been an interesting exercise. Sometimes in a large system there are things you are hesitant to change because they affect too many other things. In a tiny, toy version you can experiment freely and learn things which you can then take back to the larger system. For me, the larger system is Waterbear and this project has had a huge impact on the way Waterbear is structured.
+
+建構一個現有大型系統之架構小並且緊湊的版本是一個很有趣的實驗，有時後在大型系統中有些事物會讓你猶豫不決到底要不要改動，因為它們會一下影響到太多事物。但在一個小型的玩具版本中，你可以自由實驗並學習到可以帶回大型系統的經驗。之於我就像是 Waterbear 和本專案一樣，對於 Waterbear 目前建構的方向有非常大的影響。
+
+#### Small Experiments Make Failure OK(對小實驗失敗是 OK 的)
+
+> Some of the experiments I was able to do with this stripped-down block language were:
+> * using HTML5 drag-and-drop,
+> * running blocks directly by iterating through the DOM calling associated functions,
+> * separating the code that runs cleanly from the HTML DOM,
+> * simplified hit testing while dragging,
+> * building our own tiny vector and sprite libraries (for the game blocks), and
+> * "live coding" where the results are shown whenever you change the block script.
+
+在這個小型的方塊式語言中，我希望實驗的是：
+* 使用 HTML5 的拖放功能。
+* 依據直接迭代 DOM 並呼叫關聯函式來運行方塊。
+* 將運行的程式碼乾淨的從  HTML DOM 分離出來。
+* 嘗試簡潔化拖拉時的命中判斷。
+* 建構自有的小型向量(vector)及精靈函式庫(sprite)(為了遊戲方塊)
+> 譯註：裡面的 example 有三個檔案但都是空的=_=
+* 實作 "live coding" 讓結果能夠在改變指令方塊時即時展現
+> 譯註："live coding" 就是方塊剛放上去，不用案 run 之類的按鈕就會即時呈現新的結果。
+
+> The thing about experiments is that they do not have to succeed. We tend to gloss over failures and dead ends in our work, where failures are punished instead of treated as important vehicles for learning, but failures are essential if you are going to push forward. While I did get the HTML5 drag-and-drop working, the fact that it isn't supported at all on any mobile browser means it is a non-starter for Waterbear. Separating the code out and running code by iterating through the blocks worked so well that I've already begun bringing those ideas to Waterbear, with excellent improvements in testing and debugging. The simplified hit testing, with some modifications, is also coming back to Waterbear, as are the tiny vector and sprite libraries. Live coding hasn't made it to Waterbear yet, but once the current round of changes stabilizes I may introduce it.
+
+用來實驗的事物並不一定要成功，人們常常傾向於掩飾行不通或是失敗的實作，把失敗當成一種懲罰非學習的過程。但其實失敗為成功之母，像我就嘗試 HTML 的拖放功能，而事實上它在手機瀏覽器根本不支援，也代表這功能不會是 Waterbear 的首選。然而分離程式碼並透過迭代方塊運行方塊則運作極佳的提昇了測試跟除錯的效果，優秀到我已經開始將這個主意帶回 Waterbear，簡潔化的拖拉命中判斷在稍作修改後也會回饋到 Waterbear。至於遊戲方塊函式庫及 "live coding" 就還沒有這部份的計畫，但當現階段的改進穩定之後我可能就會引入他們。
+
+#### What Are We Trying to Build, Really?(到底想透過這個專案來建構什麼東西？)
+
+> Building a small version of a bigger system puts a sharp focus on what the important parts really are. Are there bits left in for historical reasons that serve no purpose (or worse, distract from the purpose)? Are there features no-one uses but you have to pay to maintain? Could the user interface be streamlined? All these are great questions to ask while making a tiny version. Drastic changes, like re-organizing the layout, can be made without worrying about the ramifications cascading through a more complex system, and can even guide refactoring the complex system.
+
+建構一個大型系統的小型版本讓我們可以專注於真正重要的部份。思考是否有一些因為歷史因素留下來的無用資料？(更甚是偏離目的的資料)，是否有一些根本沒人用的功能但卻要花心力維護的部份？是否使用者界面可以再做改進？這些都是重做一個小型版本時可以捫心自問的好問題。有一些重大的改變像是重新編排布局這種事就可以直接嘗試看看，不用擔心在複雜系統上會有的一連串影響。甚至後續可以當做重構一個複雜系統的實作指南。
+
+####A Program is a Process, Not a Thing(這個程式仍在進行式)
+
+> There are things I wasn't able to experiment with in the scope of this project that I may use the blockcode codebase to test out in the future. It would be interesting to create "function" blocks which create new blocks out of existing blocks. Implementing undo/redo would be simpler in a constrained environment. Making blocks accept multiple arguments without radically expanding the complexity would be useful. And finding various ways to share block scripts online would bring the webbiness of the tool full circle.
+
+其實依然有一些我在這個專案的範圍中我沒能實驗的事物，我後續可能用 blockcode 作為基礎來測試。像是如果能實作一個「創造方塊的函式方塊」，讓它可以在現有的方塊之外生成方塊，以及在仍處於建構中的環境引入「上一步/下一步」的功能也會比較簡單，又或是讓方塊可以接受多個參數，而非塞入更多方塊擴展其複雜度也會是很實用的，還有可以找幾種不同的方式讓指令方塊可以透過網路分享，讓其開發工具的整個生命週期都在網頁上，我認為都會是很有趣的。
