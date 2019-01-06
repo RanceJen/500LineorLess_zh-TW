@@ -81,8 +81,27 @@ Paxos 是由 Leslie Lamport 在其奇妙的論文中提出，最初在 1990 提�
 
 > The simplest form of Paxos provides a way for a set of servers to agree on one value, for all time. Multi-Paxos builds on this foundation by agreeing on a numbered sequence of facts, one at a time. To implement a distributed state machine, we use Multi-Paxos to agree on each state-machine input, and execute them in sequence.
 
-最簡單的 Paxos 形式為一組服務器提供了一種方式來持續同意一個值，Multi-Paxos 則建立在這個基礎上，藉由「逐一的同意一系列的事實」，為了實作一個分散式狀態機，我們使用 Multi-Paxos 來同意每個狀態機的輸入，並以序列的形式執行他們。
+最簡單的 Paxos 形式為一組服務器提供了一種方式來持續同意一個值，Muliti paxos 則是建立在「逐一同意一系列的事實」為基礎。為了實作一個分散式狀態機，我們使用 Multi-Paxos 來同意每個狀態機的輸入，並以序列的形式執行他們。
 
 > The protocol operates in a series of ballots, each led by a single member of the cluster, called the proposer. Each ballot has a unique ballot number based on an integer and the proposer's identity. The proposer's goal is to get a majority of cluster members, acting as acceptors, to accept its value, but only if another value has not already been decided.
 
 該協議由一系列的選票進行操作，每個都由叢集中的一個叫做「提案者」的成員提出，每個選票都有獨有的整數型態選票編號並由 proposer 來認證，提案者的目標是讓大多數叢集內的成員作為接收者同意其提出的價值，但前提是這個提案還沒被決定過。
+
+![](https://i.imgur.com/iWTFzIw.png)
+Figure 3.1 - A Ballot
+
+> A ballot begins with the proposer sending a `Prepare` message with the ballot number N to the acceptors and waiting to hear from a majority (Figure 3.1.)
+>
+> The `Prepare` message is a request for the accepted value (if any) with the highest ballot number less than N. Acceptors respond with a `Promise` containing any value they have already accepted, and promising not to accept any ballot numbered less than N in the future. If the acceptor has already made a promise for a larger ballot number, it includes that number in the `Promise`, indicating that the proposer has been pre-empted. In this case, the ballot is over, but the proposer is free to try again in another ballot (and with a larger ballot number).
+
+一次表決會從提案者發出 `Prepare` 訊息而開始，表決會帶有一個編號 N 來給接受者，並等待他們大多數的回應。
+
+`Prepare` 的訊息是請求其接受小於 N 的最大表決編號的數據，接受者會回應 `Promise` 並帶有所有其已接受的數據，並承諾它之後不會再接受任何小於 N 的表決編號。而此時若接受者已經對更大的表決編號做過承諾，則會將該編號帶在 `Promise` 中，藉此向提案者說明已經被捷足先登了。在這種情況下，這次的表決就直接結束，但提案者可以自由使用(更大的)表決編號再嘗試提出另一次表決。
+
+> When the proposer has heard back from a majority of the acceptors, it sends an `Accept` message, including the ballot number and value, to all acceptors. If the proposer did not receive any existing value from any acceptor, then it sends its own desired value. Otherwise, it sends the value from the highest-numbered promise.
+
+當提案者收到大多數接受者的回應時，他會送出一個 `Accept` 訊息，包含表決編號和其數據給所有接受者。如果提案者沒有在接受者中收到任何現存的數據，則他送出自己預期的數據，否則他會送出來自最高表決編號之回應的數據。
+
+> Unless it would violate a promise, each acceptor records the value from the `Accept` message as accepted and replies with an `Accepted` message. The ballot is complete and the value decided when the proposer has heard its ballot number from a majority of acceptors.
+
+除非違反會先前的承諾，否則接受者就會紀錄下來自 `Accept` 的數據，並回應一個 `Accepted` 的訊息，當提案者收到大多數接受者回應這個提案編號時，就會定調其數據且完成此表決。
