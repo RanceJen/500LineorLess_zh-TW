@@ -105,3 +105,54 @@ Figure 3.1 - A Ballot
 > Unless it would violate a promise, each acceptor records the value from the `Accept` message as accepted and replies with an `Accepted` message. The ballot is complete and the value decided when the proposer has heard its ballot number from a majority of acceptors.
 
 除非違反會先前的承諾，否則接受者就會紀錄下來自 `Accept` 的數據，並回應一個 `Accepted` 的訊息，當提案者收到大多數接受者回應這個提案編號時，就會定調其數據且完成此表決。
+
+
+> Returning to the example, initially no other value has been accepted, so the acceptors all send back a `Promise` with no value, and the proposer sends an `Accept` containing its value, say:
+
+回到範例上，再一開始沒有任何數據被同意過，所以接受者們都會先回傳一個不帶有任何數據的 `Promise` ，然後提案者再送出一個帶有自身數據的  `Accept` ，像是
+```
+ operation(name='deposit', amount=100.00, destination_account='Mike DiBernardo')
+```
+
+> If another proposer later initiates a ballot with a lower ballot number and a different operation (say, a transfer to acount `'Dustin J. Mitchell'`), the acceptors will simply not accept it. If that ballot has a larger ballot number, then the `Promise` from the acceptors will inform the proposer about Michael's $100.00 deposit operation, and the proposer will send that value in the `Accept` message instead of the transfer to Dustin. The new ballot will be accepted, but in favor of the same value as the first ballot.
+
+如果有另外一個提案者後續才用較小的表決編號初始化的操作(像轉帳給 `'Dustin J. Mitchell'`)，接受者則單純的不同意它，而如果該表決有更高的表決編號，則在接受者傳的 `Promise` 中則會告知提案者有關先前存款 100 元的操作。然後提案者會在 `Accept` 中傳送這個值而非轉帳給 Dustin，這個表決會被接受。但其實是贊成了與第一個表決同樣的數據。
+
+> In fact, the protocol will never allow two different values to be decided, even if the ballots overlap, messages are delayed, or a minority of acceptors fail.
+>
+> When multiple proposers make a ballot at the same time, it is easy for neither ballot to be accepted. Both proposers then re-propose, and hopefully one wins, but the deadlock can continue indefinitely if the timing works out just right.
+
+事實上，這個協議永遠不會允許兩種不同的數據被定義，即使有重複的表決，訊息延遲，或是小部份的接受者故障。
+當多個提案者同時提出表決時，很容易發生沒有任何表決被接受，提案者們接著又重新提案，然後期待看有沒有一者能獲勝。不過如果時機就是恰到好處則這個死鎖可以無限的持續下去。
+
+> Consider the following sequence of events:
+>
+>* Proposer A performs the `Prepare`/`Promise` phase for ballot number 1.
+>* Before Proposer A manages to get its proposal accepted, Proposer B performs a `Prepare`/`Promise` phase for ballot number 2.
+>* When Proposer A finally sends its `Accept` with ballot number 1, the acceptors reject it because they have already promised ballot number 2.
+>* Proposer A reacts by immediately sending a `Prepare` with a higher ballot number (3), before Proposer B can send its `Accept` message.
+>* Proposer B's subsequent `Accept` is rejected, and the process repeats.
+>
+> With unlucky timing -- more common over long-distance connections where the time between sending a message and getting a response is long -- this deadlock can continue for many rounds.
+
+考慮下列的事件順序
+* 提案者 A 執行了表決 1 的 `Prepare`/`Promise` 步驟
+* 在提案者 A 要接到 accepted 之前，提案者 B 執行了表決 2 的`Prepare`/`Promise` 步驟
+* 在提案者 A 廣播表決 1 的 `Accept` 時，接受者拒絕了因為他們已經承諾了表決 2(不接受更小表決)
+* 提案者 A 馬上傳送了一個新表決 3 的 `Prepare`，在提案者 B 可以廣播 `Accept` 之前。
+* 提案者 B 隨後的 `Accept` 也遭到拒絕，然後流程不斷循環。
+
+只要發生時的運氣不好(這常見於長距離通訊中，因為在發送到取得回應之間的時間差較長)，這個死鎖可以不斷重複很多次。
+
+### Multi-Paxos
+
+> Reaching consensus on a single static value is not particularly useful on its own. Clustered systems such as the bank account service want to agree on a particular state (account balances) that changes over time. We use Paxos to agree on each operation, treated as a state machine transition.
+
+對於單個靜態值達成共識並不是特別有用，叢集系統像是銀行帳戶服務希望能不斷的同意特定的狀態轉換(像帳戶額度)，我們可以用 Paxos 來同意各個操作，就像狀態機轉換一樣處理他們。
+
+> Multi-Paxos is, in effect, a sequence of simple Paxos instances (slots), each numbered sequentially. Each state transition is given a "slot number", and each member of the cluster executes transitions in strict numeric order. To change the cluster's state (to process a transfer operation, for example), we try to achieve consensus on that operation in the next slot. In concrete terms, this means adding a slot number to each message, with all of the protocol state tracked on a per-slot basis.
+
+Multi-Paxos 事實上是一個簡單 Paxos 實體的序列，每個先按順序編號，對於狀態的轉換會再給予一個插槽編號，並且每個成員執行以嚴格的數字順序進行傳輸。舉例來說要轉換叢集的狀態時(就是完成一個傳輸操作)，我們會試著在下一個個插槽上達到共識，這代表對每個訊息加上插槽編號，並且每個協議都跟蹤插槽狀態
+(待確認)
+
+> Running Paxos for every slot, with its minimum of two round trips, would be too slow. Multi-Paxos optimizes by using the same set of ballot numbers for all slots, and performing the Prepare/Promise phase for all slots at once.
