@@ -190,3 +190,13 @@ Multi-Paxos 事實上是一個簡單 Paxos 實體的序列，每個先按順序�
 我們使用的分散式狀態機還呈現了另外一個有趣的挑戰：「啟動」，當一個節點啟動時，他需要取得叢集中現存的狀態。雖然這可以用取得所有插槽所有從開始到現在的決議去解決，但這在一個足夠成熟的叢集中可能會涉及百萬個插槽，換句話說，我們需要一些用來初始化新叢集的方法。
 
 討論了夠多理論跟演算法之後，讓我們開始看看程式碼吧。
+
+### Introducing Cluster(認識叢集)
+
+> The Cluster library in this chapter implements a simple form of Multi-Paxos. It is designed as a library to provide a consensus service to a larger application.
+
+本章節中的叢集函式庫是 Multi-Paxos 的簡單實現，它被設計成一個函式庫來為大型應用提供取得共識的服務。
+
+> Users of this library will depend on its correctness, so it's important to structure the code so that we can see -- and test -- its correspondence to the specification. Complex protocols can exhibit complex failures, so we will build support for reproducing and debugging rare failures.
+
+該函式庫的用戶會依賴其提供的正確性，所以將如何結構化程式碼讓我們可以觀察並且測試其規格的正確性是很重要的。複雜的協議會呈現出複雜的故障，所以我們會建構出一個支援重現跟除錯罕見故障的函式庫。
