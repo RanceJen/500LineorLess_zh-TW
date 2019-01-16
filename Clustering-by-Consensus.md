@@ -155,4 +155,38 @@ Figure 3.1 - A Ballot
 Multi-Paxos 事實上是一個簡單 Paxos 實體的序列，每個先按順序編號，對於狀態的轉換會再給予一個插槽編號，並且每個成員執行以嚴格的數字順序進行傳輸。舉例來說要轉換叢集的狀態時(就是完成一個傳輸操作)，我們會試著在下一個個插槽上達到共識，這代表對每個訊息加上插槽編號，並且每個協議都跟蹤插槽狀態
 (待確認)
 
-> Running Paxos for every slot, with its minimum of two round trips, would be too slow. Multi-Paxos optimizes by using the same set of ballot numbers for all slots, and performing the Prepare/Promise phase for all slots at once.
+> Running Paxos for every slot, with its minimum of two round trips, would be too slow. Multi-Paxos optimizes by using the same set of ballot numbers for all slots, and performing the `Prepare`/`Promise` phase for all slots at once.
+
+要在每個插槽上執行 Paxos，每次至少都必須執行兩次的來回也太慢了點，Multi-Paxos 藉由所有插槽使用同一組表決編號優化了這點，並一次執行所有插槽的 `Prepare`/`Promise` 。
+
+### Paxos Made Pretty Hard (Paxos 是難以實現的)
+
+> Implementing Multi-Paxos in practical software is notoriously difficult, spawning a number of papers mocking Lamport's "Paxos Made Simple" with titles like "Paxos Made Practical".
+
+在實際的軟體中實現 Multi-Paxos 是惡名昭彰的困難，更產生了一些論文用像 "Paxos Made Practical" 的標題來嘲弄 Lamport 的 "Paxos Made Simple"。
+
+> First, the multiple-proposers problem described above can become problematic in a busy environment, as each cluster member attempts to get its state machine operation decided in each slot. The fix is to elect a "leader" which is responsible for submitting ballots for each slot. All other cluster nodes then send new operations to the leader for execution. Thus, in normal operation with only one leader, ballot conflicts do not occur.
+
+首先，前敘提到的多個提案者問題在繁忙的環境中越來越嚴重，因為每個叢集的成員都試圖讓其的狀態機操作在所有插槽中被決議。解決方法是選出一個 leader(領導者) 他負責提交所有插槽的表決。所有叢集中的其他結點都傳送它的新操作給領導者去執行，因此在只有單一領導者正常操作下，表決的衝突就不會再發生。
+
+> The `Prepare`/`Promise` phase can function as a kind of leader election: whichever cluster member owns the most recently promised ballot number is considered the leader. The leader is then free to execute the `Accept`/`Accepted` phase directly without repeating the first phase. As we'll see below, leader elections are actually quite complex.
+
+`Prepare` 和 `Promise` 的階段可以作為選舉 leader 的一部分，擁有最靠前表決編號的叢集成為就被作為領導者，接著領導者就可以放心執行 `Accept`/`Accepted` 的階段而不用重複前敘的部份。我們接著可以在下面看到，領導者的選舉也是很複雜的。
+
+> Although simple Paxos guarantees that the cluster will not reach conflicting decisions, it cannot guarantee that any decision will be made. For example, if the initial `Prepare` message is lost and doesn't reach the acceptors, then the proposer will wait for a `Promise` message that will never arrive. Fixing this requires carefully orchestrated re-transmissions: enough to eventually make progress, but not so many that the cluster buries itself in a packet storm.
+
+雖然 simple Paxos 保證了叢集內不會達成有衝突的決議，但它不保證會有決議被達成。舉個栗子，如果初始化的 `Prepare` 訊息丟失了沒有被傳給任何接收者，則提案者則會不斷等待永遠不會到達的 `Promise` 。要解決這個問題需要精心規劃的重送機制。要能重送到足夠繼續流程，但又不會讓整個叢集在封包風暴中炸掉。
+
+> 瘋狂的重送給多個伺服器是真的可以炸掉整個叢集的，我們最近才炸了好幾次XDD
+
+> Another problem is the dissemination of decisions. A simple broadcast of a Decision message can take care of this for the normal case. If the message is lost, though, a node can remain permanently ignorant of the decision and unable to apply state machine transitions for later slots. So an implementation needs some mechanism for sharing information about decided proposals.
+
+另外一個問題是該如何傳播決議，簡單的廣播出決議訊息就可以解決一般的狀況，但如果訊息丟失則節點可能永遠不知道該決議，並且無法為後續的插槽應用狀態機轉換。所以在實作中需要一些用來分享決議提案的機制。
+
+> Our use of a distributed state machine presents another interesting challenge: start-up. When a new node starts, it needs to catch up on the existing state of the cluster. Although it can do so by catching up on decisions for all slots since the first, in a mature cluster this may involve millions of slots. Furthermore, we need some way to initialize a new .
+> 
+> But enough talk of theory and algorithms -- let's have a look at the code.
+
+我們使用的分散式狀態機還呈現了另外一個有趣的挑戰：「啟動」，當一個節點啟動時，他需要取得叢集中現存的狀態。雖然這可以用取得所有插槽所有從開始到現在的決議去解決，但這在一個足夠成熟的叢集中可能會涉及百萬個插槽，換句話說，我們需要一些用來初始化新叢集的方法。
+
+討論了夠多理論跟演算法之後，讓我們開始看看程式碼吧。
