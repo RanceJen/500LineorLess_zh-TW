@@ -273,7 +273,7 @@ Multi-Paxos 事實上是一個簡單 Paxos 實體的序列，每個先按順序�
 
 > 譯註：這句有點拗口，意思是「協議本身是敘述傳輸的方式」，那我們用資料型態 `namedtuple` 並命名為 `Proposal` / `Ballot` 來表達協議中的兩個敘述。
 ```
-	Proposal = namedtuple('Proposal', ['caller', 'client_id', 'input'])
+    Proposal = namedtuple('Proposal', ['caller', 'client_id', 'input'])
     Ballot = namedtuple('Ballot', ['n', 'leader'])
 ```
 
