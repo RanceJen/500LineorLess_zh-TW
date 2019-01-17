@@ -200,3 +200,248 @@ Multi-Paxos 事實上是一個簡單 Paxos 實體的序列，每個先按順序�
 > Users of this library will depend on its correctness, so it's important to structure the code so that we can see -- and test -- its correspondence to the specification. Complex protocols can exhibit complex failures, so we will build support for reproducing and debugging rare failures.
 
 該函式庫的用戶會依賴其提供的正確性，所以將如何結構化程式碼讓我們可以觀察並且測試其規格的正確性是很重要的。複雜的協議會呈現出複雜的故障，所以我們的函式庫將會支援複雜問題的重現跟除錯。
+
+> The implementation in this chapter is proof-of-concept code: enough to demonstrate that the core concept is practical, but without all of the mundane equipment required for use in production. The code is structured so that such equipment can be added later with minimal changes to the core implementation.
+>
+> Let's get started.
+
+在本章節中的實作是驗證概念用的程式碼，足夠展示我們核心的概念是很實際的，但卻不需要用到正常產品環境中的設備。而且程式碼都是結構化過的，所以這些正常產品環境中的設備也可以在稍微修改實作的核心後被加入。
+
+讓我們開始吧！
+
+### Types and Constants (型態與常數)
+
+> Cluster's protocol uses fifteen different message types, each defined as a Python `namedtuple`.
+
+叢集們會使用包含十五種不同訊息型態的協議，每一種各自用 Python 的 `namedtuple` 型態定義
+```
+    Accepted = namedtuple('Accepted', ['slot', 'ballot_num'])
+    Accept = namedtuple('Accept', ['slot', 'ballot_num', 'proposal'])
+    Decision = namedtuple('Decision', ['slot', 'proposal'])
+    Invoked = namedtuple('Invoked', ['client_id', 'output'])
+    Invoke = namedtuple('Invoke', ['caller', 'client_id', 'input_value'])
+    Join = namedtuple('Join', [])
+    Active = namedtuple('Active', [])
+    Prepare = namedtuple('Prepare', ['ballot_num'])
+    Promise = namedtuple('Promise', ['ballot_num', 'accepted_proposals'])
+    Propose = namedtuple('Propose', ['slot', 'proposal'])
+    Welcome = namedtuple('Welcome', ['state', 'slot', 'decisions'])
+    Decided = namedtuple('Decided', ['slot'])
+    Preempted = namedtuple('Preempted', ['slot', 'preempted_by'])
+    Adopted = namedtuple('Adopted', ['ballot_num', 'accepted_proposals'])
+    Accepting = namedtuple('Accepting', ['leader'])
+```
+
+> Using named tuples to describe each message type keeps the code clean and helps avoid some simple errors. The named tuple constructor will raise an exception if it is not given exactly the right attributes, making typos obvious. The tuples format themselves nicely in log messages, and as an added bonus don't use as much memory as a dictionary.
+> 
+> Creating a message reads naturally:
+
+用 named tuples 去敘述各種訊息型態可以保持程式碼整潔並協助避免一些簡單的錯誤，named tuples 的建構子在沒有給定正確屬性的時候會丟出例外，讓手誤的部份變得相當明顯。 tuples 的格式在 log 中也很容易格式化，更加分的是它用的記憶體還沒有 dictionary 多。
+
+可以很自然的閱讀創建 tuples 的訊息
+```
+  msg = Accepted(slot=10, ballot_num=30)
+```
+
+> And the fields of that message are accessible with a minimum of extra typing:
+
+而且要存取該值域也很簡單
+
+> 譯註：這句我意譯了，照字面翻很不直觀。
+```
+   got_ballot_num = msg.ballot_num
+```
+
+> We'll see what these messages mean in the sections that follow. The code also introduces a few constants, most of which define timeouts for various messages:
+
+我們將在後續的部份看懂這些訊息的意思，這些程式碼引入了一些常數，它們大多是在定義各種訊息的超時。
+
+```
+    JOIN_RETRANSMIT = 0.7
+    CATCHUP_INTERVAL = 0.6
+    ACCEPT_RETRANSMIT = 1.0
+    PREPARE_RETRANSMIT = 1.0
+    INVOKE_RETRANSMIT = 0.5
+    LEADER_TIMEOUT = 1.0
+    NULL_BALLOT = Ballot(-1, -1)  # sorts before all real ballots
+    NOOP_PROPOSAL = Proposal(None, None, None)  # no-op to fill otherwise empty slots
+```
+
+> Finally, Cluster uses two data types named to correspond to the protocol description:
+
+最終，叢集命名下面兩種資料型態來對應協議的敘述
+
+> 譯註：這句有點拗口，意思是「協議本身是敘述傳輸的方式」，那我們用資料型態 `namedtuple` 並命名為 `Proposal` / `Ballot` 來表達協議中的兩個敘述。
+```
+	Proposal = namedtuple('Proposal', ['caller', 'client_id', 'input'])
+    Ballot = namedtuple('Ballot', ['n', 'leader'])
+```
+
+### Component Model(組件模型)
+
+> Humans are limited by what we can hold in our active memory. We can't reason about the entire Cluster implementation at once -- it's just too much, so it's easy to miss details. For similar reasons, large monolithic codebases are hard to test: test cases must manipulate many moving pieces and are brittle, failing on almost any change to the code.
+
+人類受到我們在活躍記憶中能夠擁有的東西的限制，我們沒辦法一次就推測出整個叢集的實現，因為信息量太大了，所以很容易錯失細節。相同的，一整個大型獨立架構的程式碼也是很難測試的，測資必須模擬很多環節並且測試結果也很脆弱，只要有任何一點程式改動就有可能失敗。
+
+> To encourage testability and keep the code readable, we break Cluster down into a handful of classes corresponding to the roles described in the protocol. Each is a subclass of `Role`.
+
+為了增強其可測試性並且保持程式可讀性，我們將叢集拆分成數個類別，分別對應協議敘述的規則，每一個都是整個規則本身的子類別。
+
+```
+class Role(object):
+
+    def __init__(self, node):
+        self.node = node
+        self.node.register(self)
+        self.running = True
+        self.logger = node.logger.getChild(type(self).__name__)
+
+    def set_timer(self, seconds, callback):
+        return self.node.network.set_timer(self.node.address, seconds,
+                                           lambda: self.running and callback())
+
+    def stop(self):
+        self.running = False
+        self.node.unregister(self)
+```
+
+> The roles that a cluster node has are glued together by the `Node` class, which represents a single node on the network. Roles are added to and removed from the node as execution proceeds. Messages that arrive on the node are relayed to all active roles, calling a method named after the message type with a `do_` prefix. These `do_` methods receive the message's attributes as keyword arguments for easy access. The `Node` class also provides a `send` method as a convenience, using `functools.partial` to supply some arguments to the same methods of the `Network` class.
+
+一個叢集所擁有的全部規則是被用 `Node` 類別連結在一起的，它代表整個網路中的單一節點，規則可以隨著運行流程被加入或從節點中移除，到達一個節點的訊息則全部依賴於運行不同的規則去調用有 `do_` 前綴的訊息類型。這些 `do_` 方法會接收訊息的屬性當作參數可以輕鬆的使用。 `Node` 的類別也提供 `send` 的方法，內部利用 `functools.partial` 來轉送一些參數給 `Network` 的 `send` 方法。
+
+> 譯註：這段是在說明 code ，所以配合下面的程式碼觀看比較容易理解。
+
+```
+
+class Node(object):
+    unique_ids = itertools.count()
+
+    def __init__(self, network, address):
+        self.network = network
+        self.address = address or 'N%d' % self.unique_ids.next()
+        self.logger = SimTimeLogger(
+            logging.getLogger(self.address), {'network': self.network})
+        self.logger.info('starting')
+        self.roles = []
+        self.send = functools.partial(self.network.send, self)
+
+    def register(self, roles):
+        self.roles.append(roles)
+
+    def unregister(self, roles):
+        self.roles.remove(roles)
+
+    def receive(self, sender, message):
+        handler_name = 'do_%s' % type(message).__name__
+
+        for comp in self.roles[:]:
+            if not hasattr(comp, handler_name):
+                continue
+            comp.logger.debug("received %s from %s", message, sender)
+            fn = getattr(comp, handler_name)
+            fn(sender=sender, **message._asdict())
+```
+
+### Application Interface(應用程序介面)
+
+> The application creates and starts a `Member` object on each cluster member, providing an application-specific state machine and a list of peers. The member object adds a bootstrap role to the node if it is joining an existing cluster, or seed if it is creating a new cluster. It then runs the protocol (via `Network.run`) in a separate thread.
+
+應用程式本身創建並為所有叢集成員各啟動一個 `Member` 物件，提供一個應用程式專用的狀態機及對照列表。如果節點本身是要加入一個現存的叢集則成員的物件會添加一個引導的規則給節點，或是當其實是要創造新的從即時添加 seed(一種 role) 給它，然後在不同的執行緒中執行該協議(透過 `Network.run`)
+
+> The application interacts with the cluster through the `invoke` method, which kicks off a proposal for a state transition. Once that proposal is decided and the state machine runs, `invoke` returns the machine's output. The method uses a simple synchronized `Queue` to wait for the result from the protocol thread.
+
+應用程式本身透過調用方法來跟叢集互動，同時也創造一個新的提案揭開狀態轉換的序幕，一旦這個提案被決議並則狀態機開始運行。 `invoke` 會回傳狀態機的輸出，這個方法用來和 `Queue` 做簡單的同步以等待協議的執行緒回傳結果。
+
+> 譯註：這段一樣看 code 比較容易理解意思。
+```
+class Member(object):
+
+    def __init__(self, state_machine, network, peers, seed=None,
+                 seed_cls=Seed, bootstrap_cls=Bootstrap):
+        self.network = network
+        self.node = network.new_node()
+        if seed is not None:
+            self.startup_role = seed_cls(self.node, initial_state=seed, peers=peers,
+                                      execute_fn=state_machine)
+        else:
+            self.startup_role = bootstrap_cls(self.node,
+                                      execute_fn=state_machine, peers=peers)
+        self.requester = None
+
+    def start(self):
+        self.startup_role.start()
+        self.thread = threading.Thread(target=self.network.run)
+        self.thread.start()
+
+    def invoke(self, input_value, request_cls=Requester):
+        assert self.requester is None
+        q = Queue.Queue()
+        self.requester = request_cls(self.node, input_value, q.put)
+        self.requester.start()
+        output = q.get()
+        self.requester = None
+        return output
+```
+
+### Role Classes(規則類別)
+
+> Let's look at each of the role classes in the library one by one.
+讓我們一一檢視函式庫內的規則類別。
+
+#### Acceptor(接受者)
+
+> The `Acceptor` implements the acceptor role in the protocol, so it must store the ballot number representing its most recent promise, along with the set of accepted proposals for each slot. It then responds to `Prepare` and `Accept` messages according to the protocol. The result is a short class that is easy to compare to the protocol.
+> 
+> For acceptors, Multi-Paxos looks a lot like Simple Paxos, with the addition of slot numbers to the messages.
+
+`Acceptor` 實現了協議中接受者的規則，所以他必須保存能代表最新承諾的表決編號，以及每個插槽已接受的協議集合。然後他會根據協議回應 `Prepare` 和 `Accept` 的訊息，回應會是一個簡短的類別以至於可以輕易的跟協議本身做比較。
+
+對於接受者來說 Multi-Paxos 跟簡單的 Paxos 看起來很相識，就是訊息會多了插槽的編號。
+
+```
+class Acceptor(Role):
+
+    def __init__(self, node):
+        super(Acceptor, self).__init__(node)
+        self.ballot_num = NULL_BALLOT
+        self.accepted_proposals = {}  # {slot: (ballot_num, proposal)}
+
+    def do_Prepare(self, sender, ballot_num):
+        if ballot_num > self.ballot_num:
+            self.ballot_num = ballot_num
+            # we've heard from a scout, so it might be the next leader
+            self.node.send([self.node.address], Accepting(leader=sender))
+
+        self.node.send([sender], Promise(
+            ballot_num=self.ballot_num, 
+            accepted_proposals=self.accepted_proposals
+        ))
+
+    def do_Accept(self, sender, ballot_num, slot, proposal):
+        if ballot_num >= self.ballot_num:
+            self.ballot_num = ballot_num
+            acc = self.accepted_proposals
+            if slot not in acc or acc[slot][0] < ballot_num:
+                acc[slot] = (ballot_num, proposal)
+
+        self.node.send([sender], Accepted(
+            slot=slot, ballot_num=self.ballot_num))
+```
+
+#### Replica(仿製品)
+
+> The `Replica` class is the most complicated role class, as it has a few closely related responsibilities:
+> * Making new proposals;
+> * Invoking the local state machine when proposals are decided;
+> * Tracking the current leader; and
+> * Adding newly started nodes to the cluster.
+
+`Replica` 類別是最為複雜的規則類別，它有數個緊密相關的職責
+* 發起一個新的提案
+* 當提案被決議的時候調用本地的狀態機
+* 追蹤現在的領導者是誰
+* 為叢集加入新的節點
+
+> The replica creates new proposals in response to `Invoke` messages from clients, selecting what it believes to be an unused slot and sending a `Propose` message to the current leader (Figure 3.2.) Furthermore, if the consensus for the selected slot is for a different proposal, the replica must re-propose with a new slot.
+
+仿製品會為客戶端發起一個提案作為回應，選擇一個尚未使用的插槽並送訊息給當前的領導者。此外如果選擇插槽回應的共識是給其他提案的，則仿製品需要重送提案給新的插槽。
