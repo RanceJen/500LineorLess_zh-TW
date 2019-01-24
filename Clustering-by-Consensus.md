@@ -445,3 +445,21 @@ class Acceptor(Role):
 > The replica creates new proposals in response to `Invoke` messages from clients, selecting what it believes to be an unused slot and sending a `Propose` message to the current leader (Figure 3.2.) Furthermore, if the consensus for the selected slot is for a different proposal, the replica must re-propose with a new slot.
 
 仿製品會為客戶端發起一個提案作為回應，選擇一個尚未使用的插槽並送訊息給當前的領導者。此外如果選擇插槽回應的共識是給其他提案的，則仿製品需要重送提案給新的插槽。
+![](https://i.imgur.com/5c33ea4.png)
+Figure 3.2 - Replica Role Control Flow
+
+> `Decision` messages represent slots on which the cluster has come to consensus. Here, replicas store the new decision, then run the state machine until it reaches an undecided slot. Replicas distinguish decided slots, on which the cluster has agreed, from committed slots, which the local state machine has processed. When slots are decided out of order, the committed proposals may lag behind, waiting for the next slot to be decided. When a slot is committed, each replica sends an `Invoked` message back to the requester with the result of the operation.
+
+`Decision` 訊息代表該叢集的插槽已達成共識，在這裡 replica 會先保存這個新的決定，然後運行狀態機直到他達到一個還沒決定的插槽。 replica 會從本地狀態機處理的順序來區分該叢集下已決議的插槽，如果插槽的決議是亂序的，那這個提案可能被向後順延，直到下一個插槽被決定為止。當插槽提交完成，每個 replica 都會傳送一個 `Invoked` 訊息帶操作的結果到 requester 。
+
+> In some circumstances, it's possible for a slot to have no active proposals and no decision. The state machine is required to execute slots one by one, so the cluster must reach a consensus on something to fill the slot. To protect against this possibility, replicas make a "no-op" proposal whenever they catch up on a slot. If such a proposal is eventually decided, then the state machine does nothing for that slot.
+
+在某些情況下，有可能一個插槽並沒有提案要被決議。但狀態機仍需要一個一個的執行插槽，所以叢集必須達成某種共識來填滿這些空插槽。為了應對這種可能性，仿製品會製作一個 "no-op" 的提案當他發現這種插槽，如果這種提案被決議了，然後狀態機並不會實際做任何事。
+
+> Likewise, it's possible for the same proposal to be decided twice. The replica skips invoking the state machine for any such duplicate proposals, performing no transition for that slot.
+
+同樣的，有可能同一個提案被重複決議，對於任何重複的提案仿製品會略過不調用狀態機，確保針對這個插槽沒有任何狀態轉換。
+
+> Replicas need to know which node is the active leader in order to send Propose messages to it. There is a surprising amount of subtlety required to get this right, as we'll see later. Each replica tracks the active leader using three sources of information.
+
+仿製品必須知道哪個節點是運行中的領導者才能發提案訊息給它。這需要一些極為精妙的操作才能達成，我們在後面就會看到，仿製品用三種訊息做來源來追蹤現存的領導者。
