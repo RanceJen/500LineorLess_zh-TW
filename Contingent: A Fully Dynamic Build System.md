@@ -1,4 +1,5 @@
-# Contingent: A Fully Dynamic Build System（Contingent: 一個完全動態的建構系統）
+# Contingent: A Fully Dynamic Build System
+（Contingent: 一個完全動態的建構系統）
 ## 作者： Brandon Rhodes and Daniel Rocco
 
 translated by<`Hoching`>
@@ -173,7 +174,7 @@ build systems 在經過數十年的使用和實行後，我們可能會期待它
 
 > With its usual caution as regards the table of contents, Sphinx will dutifully rebuild both this API reference document as well as the `index.html` home page of your project:
 
-由於對於目錄的謹慎，Sphinx 會盡職地重 build 這個 API 參考文檔和你專案的首頁 `index.html`：
+由於對於目錄的謹慎，Sphinx 會盡職地重 build 這個 API 參考文檔和你專案的首頁 `index.html`：
 
 ```
    writing output... [ 50%] api
@@ -255,11 +256,14 @@ $ make html
 
 > The result would be a system like the old static `make` tool, but which learned the dependencies between files as they were built — that added and removed dependencies dynamically as cross references were added, updated, and deleted.
 
-
+結果將會是一個類似於舊的靜態 `make` 工具的系統，但是它在建構文件時學習了文件之間的依賴關係 —— 在添加、更新和刪除交叉引用時，依賴性會動態地添加和刪除。
 
 > In the sections that follow we will construct such a tool, named Contingent, in Python. Contingent guarantees correctness in the presence of dynamic dependencies while performing the fewest possible rebuild steps. While it can be applied to any problem domain, we will run it against a small version of the problem outlined above.
 
-## Linking Tasks to Make a Graph
+在接下來的部分中，我們將在 Python 中構建一個名為 Contingent 的工具。在執行盡可能少的重建步驟的同時，Contingent 保證存在動態依賴性時的正確性。雖然它可以應用於任何問題域，但我們將針對上述問題的小版本來執行它。
+
+
+## Linking Tasks to Make a Graph（連結任務們來做圖）
 
 > Any build system needs a way to link inputs and outputs. The three markup texts in our discussion above, for example, each produce a corresponding HTML output file. The most natural way to express these relationships is as a collection of boxes and arrows — or, in mathematical terminology, <em>nodes</em> and <em>edges</em> — to form a <em>graph</em>.
 
@@ -276,7 +280,7 @@ $ make html
 
 > How could we represent such a graph in Python?
 
-我們要如何用 Python 表現出那樣的一張圖呢？
+我們要如何用 Python 表現出那樣的一張圖呢？
 
 > The Python language gives priority to four generic data structures by giving them direct support in the language syntax. You can create new instances of these big-four data structures by simply typing their literal representation into your source code, and their four type objects are available as built-in symbols that can be used without being imported.
 
@@ -309,7 +313,7 @@ Python 語言會優先考慮四種通用數據結構，在語言語法中提供�
 
 > The **dict** is an associative data structure for storing values accessible by a key. Dicts let the programmer chose the key by which each value is indexed, instead of using automatic integer indexing as the tuple and list do. The lookup is backed by a hash table, which means that dict key lookup runs at the same speed whether the dict has a dozen or a million keys.
 
-**dict** 是一種關連性的資料結構，用於儲存可用 key 訪問的值。Dicts 讓程式設計師選擇索引每個值的 key，而不是像 tuple 和 list 使用自動整數索引。查找由哈希表支持，這意味著無論 dict 有十幾個還是一百萬個 key，dict 用 key 查找都以相同的速度運行。
+**dict** 是一種關連性的資料結構，用於儲存可用 key 訪問的值。Dicts 讓程式設計師選擇索引每個值的 key，而不是像 tuple 和 list 使用自動整數索引。查找由哈希表支持，這意味著無論 dict 有十幾個還是一百萬個 key，dict 用 key 查找都以相同的速度運行。
 
 ```python
 {'ssh': 22, 'telnet': 23, 'domain': 53, 'http': 80}
@@ -427,7 +431,7 @@ Python 靈活性的關鍵是這四種數據結構是可組合的。程式設計�
 
 > The true value of classes, then, is not that they change the science of data design. The value of classes is that they let you <em>hide</em> your data design from the rest of a program!
 
-類別實際上的價值不是他改變了資料設計的科學，而是它讓你*隱藏*了你的資料設計，不被程式的其他部分看到。
+類別實際上的價值不是他改變了資料設計的科學，而是它讓你*隱藏*了你的資料設計，不被程式的其他部分看到。
 
 > Successful application design hinges upon our ability to exploit the powerful built-in data structures Python offers us while minimizing the volume of details we are required to keep in our heads at any one time. Classes provide the mechanism for resolving this apparent quandary: used effectively, a class provides a facade around some small subset of the system's overall design. When working within one subset — a `Graph`, for example — we can forget the implementation details of other subsets as long as we can remember their interfaces. In this way, programmers often find themselves navigating among several levels of abstraction in the course of writing a system, now working with the specific data model and implementation details for a particular subsystem, now connecting higher-level concepts through their interfaces.
 
@@ -487,7 +491,7 @@ class Graph:
 
 > Why are we using a `defaultdict` instead of a standard dict? A common problem when composing dicts with other data structures is handling missing keys. With a normal dict, retrieving a key that does not exist raises a `KeyError`:
 
-為什麼我們會用 `defaultdict` 而不是標準 dict 呢？當在用其他的資料結構組成 dict 的時候，常見的問題就是要處理消失的鍵值。使用一般 dict 的時候，如果去存取一個不存在的鍵值會觸發一個 `KeyError`：
+為什麼我們會用 `defaultdict` 而不是標準 dict 呢？當在用其他的資料結構組成 dict 的時候，常見的問題就是要處理消失的鍵值。使用一般 dict 的時候，如果去存取一個不存在的鍵值會觸發一個 `KeyError`：
 
 ```python
 >>> consequences_of = {}
@@ -1136,7 +1140,7 @@ calling title_of('tutorial.txt')
 
 > Success! Only one document got rebuilt. The fact that `title_of()`, given a new input document, nevertheless returned the same value, means that all further downstream tasks were insulated from the change and did not get re-invoked.
 
-成功！只重建了一個文檔。給定一個新的輸入文檔，然而 `title_of()` 是返回相同的值，這意味著所有進一步的下游任務都與更動無關，並且沒有被重新調用。
+成功！只重建了一個文檔。給定一個新的輸入文檔，然而 `title_of()` 是返回相同的值，這意味著所有進一步的下游任務都與更動無關，並且沒有被重新調用。
 
 
 ## Conclusion（結論）
