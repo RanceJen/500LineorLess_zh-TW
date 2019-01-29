@@ -1,5 +1,4 @@
-# Contingent: A Fully Dynamic Build System
-（Contingent: 一個完全動態的建構系統）
+# Contingent: A Fully Dynamic Build System（Contingent: 一個完全動態的建構系統）
 ## 作者： Brandon Rhodes and Daniel Rocco
 
 translated by<`Hoching`>
