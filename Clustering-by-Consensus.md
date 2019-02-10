@@ -153,7 +153,8 @@ Figure 3.1 - A Ballot
 > Multi-Paxos is, in effect, a sequence of simple Paxos instances (slots), each numbered sequentially. Each state transition is given a "slot number", and each member of the cluster executes transitions in strict numeric order. To change the cluster's state (to process a transfer operation, for example), we try to achieve consensus on that operation in the next slot. In concrete terms, this means adding a slot number to each message, with all of the protocol state tracked on a per-slot basis.
 
 Multi-Paxos 事實上是一個簡單 Paxos 實體的序列，每個先按順序編號，對於狀態的轉換會再給予一個插槽編號，並且每個成員執行以嚴格的數字順序進行傳輸。舉例來說要轉換叢集的狀態時(就是完成一個傳輸操作)，我們會試著在下一個個插槽上達到共識，這代表對每個訊息加上插槽編號，並且每個協議都跟蹤插槽狀態
-(待確認)
+
+> 插槽就是一個陣列用來保存每次跟接下來的 transation
 
 > Running Paxos for every slot, with its minimum of two round trips, would be too slow. Multi-Paxos optimizes by using the same set of ballot numbers for all slots, and performing the `Prepare`/`Promise` phase for all slots at once.
 
@@ -285,7 +286,9 @@ Multi-Paxos 事實上是一個簡單 Paxos 實體的序列，每個先按順序�
 
 > To encourage testability and keep the code readable, we break Cluster down into a handful of classes corresponding to the roles described in the protocol. Each is a subclass of `Role`.
 
-為了增強其可測試性並且保持程式可讀性，我們將叢集拆分成數個類別，分別對應協議敘述的規則，每一個都是整個規則本身的子類別。
+為了增強其可測試性並且保持程式可讀性，我們將叢集拆分成數個類別，分別對應協議敘述的不同角色們，每一個都是整個「角色」類別本身的子類別。
+
+> 由大往小分別是 網路 > 叢集 > 節點 > 角色
 
 ```
 class Role(object):
@@ -307,7 +310,7 @@ class Role(object):
 
 > The roles that a cluster node has are glued together by the `Node` class, which represents a single node on the network. Roles are added to and removed from the node as execution proceeds. Messages that arrive on the node are relayed to all active roles, calling a method named after the message type with a `do_` prefix. These `do_` methods receive the message's attributes as keyword arguments for easy access. The `Node` class also provides a `send` method as a convenience, using `functools.partial` to supply some arguments to the same methods of the `Network` class.
 
-一個叢集所擁有的全部規則是被用 `Node` 類別連結在一起的，它代表整個網路中的單一節點，規則可以隨著運行流程被加入或從節點中移除，到達一個節點的訊息則全部依賴於運行不同的規則去調用有 `do_` 前綴的訊息類型。這些 `do_` 方法會接收訊息的屬性當作參數可以輕鬆的使用。 `Node` 的類別也提供 `send` 的方法，內部利用 `functools.partial` 來轉送一些參數給 `Network` 的 `send` 方法。
+一個叢集所擁有的全部角色是被用 `Node` 類別連結在一起的，它代表整個網路中的單一節點，角色可以隨著運行流程被加入或從節點中移除，到達一個節點的訊息則全部依賴於運行不同的角色去調用有 `do_` 前綴的訊息類型。這些 `do_` 方法會接收訊息的屬性當作參數可以輕鬆的使用。 `Node` 的類別也提供 `send` 的方法，內部利用 `functools.partial` 來轉送一些參數給 `Network` 的 `send` 方法。
 
 > 譯註：這段是在說明 code ，所以配合下面的程式碼觀看比較容易理解。
 
@@ -346,7 +349,7 @@ class Node(object):
 
 > The application creates and starts a `Member` object on each cluster member, providing an application-specific state machine and a list of peers. The member object adds a bootstrap role to the node if it is joining an existing cluster, or seed if it is creating a new cluster. It then runs the protocol (via `Network.run`) in a separate thread.
 
-應用程式本身創建並為所有叢集成員各啟動一個 `Member` 物件，提供一個應用程式專用的狀態機及對照列表。如果節點本身是要加入一個現存的叢集則成員的物件會添加一個引導的規則給節點，或是當其實是要創造新的從即時添加 seed(一種 role) 給它，然後在不同的執行緒中執行該協議(透過 `Network.run`)
+應用程式本身創建並為所有叢集成員各啟動一個 `Member` 物件，提供一個應用程式專用的狀態機及對照列表。如果節點本身是要加入一個現存的叢集則成員的物件會添加一個引導的角色給節點，或是當其實是要創造新的從即時添加 seed(一種 role) 給它，然後在不同的執行緒中執行該協議(透過 `Network.run`)
 
 > The application interacts with the cluster through the `invoke` method, which kicks off a proposal for a state transition. Once that proposal is decided and the state machine runs, `invoke` returns the machine's output. The method uses a simple synchronized `Queue` to wait for the result from the protocol thread.
 
@@ -383,10 +386,10 @@ class Member(object):
         return output
 ```
 
-### Role Classes(規則類別)
+### Role Classes(角色類別們)
 
 > Let's look at each of the role classes in the library one by one.
-讓我們一一檢視函式庫內的規則類別。
+讓我們一一檢視函式庫內的角色類別。
 
 #### Acceptor(接受者)
 
@@ -394,7 +397,7 @@ class Member(object):
 > 
 > For acceptors, Multi-Paxos looks a lot like Simple Paxos, with the addition of slot numbers to the messages.
 
-`Acceptor` 實現了協議中接受者的規則，所以他必須保存能代表最新承諾的表決編號，以及每個插槽已接受的協議集合。然後他會根據協議回應 `Prepare` 和 `Accept` 的訊息，回應會是一個簡短的類別以至於可以輕易的跟協議本身做比較。
+`Acceptor` 實現了協議中接受者這個角色，所以他必須保存能代表最新承諾的表決編號，以及每個插槽已接受的協議集合。然後他會根據協議回應 `Prepare` 和 `Accept` 的訊息，回應會是一個簡短的類別以至於可以輕易的跟協議本身做比較。
 
 對於接受者來說 Multi-Paxos 跟簡單的 Paxos 看起來很相識，就是訊息會多了插槽的編號。
 
@@ -436,11 +439,13 @@ class Acceptor(Role):
 > * Tracking the current leader; and
 > * Adding newly started nodes to the cluster.
 
-`Replica` 類別是最為複雜的規則類別，它有數個緊密相關的職責
+`Replica` 類別是最為複雜的角色類別，它有數個緊密相關的職責
 * 發起一個新的提案
 * 當提案被決議的時候調用本地的狀態機
 * 追蹤現在的領導者是誰
 * 為叢集加入新的節點
+
+> 以下 Replica 翻成仿製品
 
 > The replica creates new proposals in response to `Invoke` messages from clients, selecting what it believes to be an unused slot and sending a `Propose` message to the current leader (Figure 3.2.) Furthermore, if the consensus for the selected slot is for a different proposal, the replica must re-propose with a new slot.
 
@@ -454,7 +459,7 @@ Figure 3.2 - Replica Role Control Flow
 
 > In some circumstances, it's possible for a slot to have no active proposals and no decision. The state machine is required to execute slots one by one, so the cluster must reach a consensus on something to fill the slot. To protect against this possibility, replicas make a "no-op" proposal whenever they catch up on a slot. If such a proposal is eventually decided, then the state machine does nothing for that slot.
 
-在某些情況下，有可能一個插槽並沒有提案要被決議。但狀態機仍需要一個一個的執行插槽，所以叢集必須達成某種共識來填滿這些空插槽。為了應對這種可能性，仿製品會製作一個 "no-op" 的提案當他發現這種插槽，如果這種提案被決議了，然後狀態機並不會實際做任何事。
+在某些情況下，有可能一個插槽並沒有提案要被決議。但狀態機仍需要一個一個的執行插槽，所以叢集必須達成某種共識來填滿這些空插槽。為了應對這種可能性，當仿製品發現這種插槽它會製作一個 "no-op" 的提案，如果這種提案被決議了，然後狀態機並不會實際做任何事。
 
 > Likewise, it's possible for the same proposal to be decided twice. The replica skips invoking the state machine for any such duplicate proposals, performing no transition for that slot.
 
@@ -463,3 +468,275 @@ Figure 3.2 - Replica Role Control Flow
 > Replicas need to know which node is the active leader in order to send Propose messages to it. There is a surprising amount of subtlety required to get this right, as we'll see later. Each replica tracks the active leader using three sources of information.
 
 仿製品必須知道哪個節點是運行中的領導者才能發提案訊息給它。這需要一些極為精妙的操作才能達成，我們在後面就會看到，仿製品用三種訊息做來源來追蹤現存的領導者。
+
+> When the leader role becomes active, it sends an `Adopted` message to the replica on the same node (Figure 3.3.)
+
+當領導者這項角色被啟動時，他會送一個 `Adopted` 的訊息到相同節點上所有的仿製品。(如下圖)
+
+![](http://aosabook.org/en/500L/cluster-images/adopted.png)
+Figure 3.3 - Adopted
+
+> When the acceptor role sends a `Promise` to a new leader, it sends an `Accepting` message to its local replica (Figure 3.4.)
+
+而當接收者的角色發送一個 `Promise` 給新的領導者時，它會再送一個接受 `Accepting` 的訊息給本地的仿製品。(如下圖)
+
+![](http://aosabook.org/en/500L/cluster-images/accepting.png)
+Figure 3.4 - Accepting
+
+> The active leader sends `Active` messages as a heartbeat (Figure 3.5.) If no such message arrives before the `LEADER_TIMEOUT` expires, the replica assumes the leader is dead and moves on to the next leader. In this case, it's important that all replicas choose the same new leader, which we accomplish by sorting the members and selecting the next one in the list.
+
+活動中的領導者會送出 `Active` 的訊息作為心跳包(如下圖)，如果在 `LEADER_TIMEOUT` 超時之前一直都沒有收到這個訊息的話，仿製品會認定領導者已經死了並選出下個領導者。在這種情況下，讓所有仿製品都正確選擇相同的新領導者是很重要的，我們藉由排序並且選擇列表中的下一位成員來完成這件事。
+
+![](http://aosabook.org/en/500L/cluster-images/active.png)
+Figure 3.5 - Active
+
+> Finally, when a node joins the network, the bootstrap role sends a `Join` message (Figure 3.6.) The replica responds with a `Welcome` message containing its most recent state, allowing the new node to come up to speed quickly.
+
+在最後，當一個節點加入整個網路時，引導者的角色會送出一個 `Join` 的訊息，而仿製品則會回他一個帶有最新狀態的 `Welcome` 的訊息，讓新的節點可以盡快加入(如下圖)。
+
+![](http://aosabook.org/en/500L/cluster-images/bootstrap.png)
+Figure 3.6 - Bootstrap
+
+```=python
+class Replica(Role):
+
+    def __init__(self, node, execute_fn, state, slot, decisions, peers):
+        super(Replica, self).__init__(node)
+        self.execute_fn = execute_fn
+        self.state = state
+        self.slot = slot
+        self.decisions = decisions
+        self.peers = peers
+        self.proposals = {}
+        # next slot num for a proposal (may lead slot)
+        self.next_slot = slot
+        self.latest_leader = None
+        self.latest_leader_timeout = None
+
+    # making proposals
+
+    def do_Invoke(self, sender, caller, client_id, input_value):
+        proposal = Proposal(caller, client_id, input_value)
+        slot = next((s for s, p in self.proposals.iteritems() if p == proposal), None)
+        # propose, or re-propose if this proposal already has a slot
+        self.propose(proposal, slot)
+
+    def propose(self, proposal, slot=None):
+        """Send (or resend, if slot is specified) a proposal to the leader"""
+        if not slot:
+            slot, self.next_slot = self.next_slot, self.next_slot + 1
+        self.proposals[slot] = proposal
+        # find a leader we think is working - either the latest we know of, or
+        # ourselves (which may trigger a scout to make us the leader)
+        leader = self.latest_leader or self.node.address
+        self.logger.info(
+            "proposing %s at slot %d to leader %s" % (proposal, slot, leader))
+        self.node.send([leader], Propose(slot=slot, proposal=proposal))
+
+    # handling decided proposals
+
+    def do_Decision(self, sender, slot, proposal):
+        assert not self.decisions.get(self.slot, None), \
+                "next slot to commit is already decided"
+        if slot in self.decisions:
+            assert self.decisions[slot] == proposal, \
+                "slot %d already decided with %r!" % (slot, self.decisions[slot])
+            return
+        self.decisions[slot] = proposal
+        self.next_slot = max(self.next_slot, slot + 1)
+
+        # re-propose our proposal in a new slot if it lost its slot and wasn't a no-op
+        our_proposal = self.proposals.get(slot)
+        if (our_proposal is not None and 
+            our_proposal != proposal and our_proposal.caller):
+            self.propose(our_proposal)
+
+        # execute any pending, decided proposals
+        while True:
+            commit_proposal = self.decisions.get(self.slot)
+            if not commit_proposal:
+                break  # not decided yet
+            commit_slot, self.slot = self.slot, self.slot + 1
+
+            self.commit(commit_slot, commit_proposal)
+
+    def commit(self, slot, proposal):
+        """Actually commit a proposal that is decided and in sequence"""
+        decided_proposals = [p for s, p in self.decisions.iteritems() if s < slot]
+        if proposal in decided_proposals:
+            self.logger.info(
+                "not committing duplicate proposal %r, slot %d", proposal, slot)
+            return  # duplicate
+
+        self.logger.info("committing %r at slot %d" % (proposal, slot))
+        if proposal.caller is not None:
+            # perform a client operation
+            self.state, output = self.execute_fn(self.state, proposal.input)
+            self.node.send([proposal.caller], 
+                Invoked(client_id=proposal.client_id, output=output))
+
+    # tracking the leader
+
+    def do_Adopted(self, sender, ballot_num, accepted_proposals):
+        self.latest_leader = self.node.address
+        self.leader_alive()
+
+    def do_Accepting(self, sender, leader):
+        self.latest_leader = leader
+        self.leader_alive()
+
+    def do_Active(self, sender):
+        if sender != self.latest_leader:
+            return
+        self.leader_alive()
+
+    def leader_alive(self):
+        if self.latest_leader_timeout:
+            self.latest_leader_timeout.cancel()
+
+        def reset_leader():
+            idx = self.peers.index(self.latest_leader)
+            self.latest_leader = self.peers[(idx + 1) % len(self.peers)]
+            self.logger.debug("leader timed out; tring the next one, %s", 
+                self.latest_leader)
+        self.latest_leader_timeout = self.set_timer(LEADER_TIMEOUT, reset_leader)
+
+    # adding new cluster members
+
+    def do_Join(self, sender):
+        if sender in self.peers:
+            self.node.send([sender], Welcome(
+                state=self.state, slot=self.slot, decisions=self.decisions))
+```
+
+#### Leader, Scout, and Commander(領導者、偵查者及指揮者)
+
+> The leader's primary task is to take `Propose` messages requesting new ballots and produce decisions. A leader is "active" when it has successfully carried out the `Prepare`/`Promise` portion of the protocol. An active leader can immediately send an `Accept` message in response to a `Propose`.
+
+領導者主要的任務就是接收 `Propose` 的提案請求並做出決定，當領導者成功處理協議的 `Prepare`/`Promise` 部份時，它就是個運作中的領導者。一個作用中的領導者可以立即的送出 `Accept` 來回應 `Propose`。
+
+> In keeping with the class-per-role model, the leader delegates to the scout and commander roles to carry out each portion of the protocol.
+
+為了保持一個類別對應一個角色的模型，領導者會再分派指揮者跟偵查者去處理協議的各個部份。
+
+```=python
+class Leader(Role):
+
+    def __init__(self, node, peers, commander_cls=Commander, scout_cls=Scout):
+        super(Leader, self).__init__(node)
+        self.ballot_num = Ballot(0, node.address)
+        self.active = False
+        self.proposals = {}
+        self.commander_cls = commander_cls
+        self.scout_cls = scout_cls
+        self.scouting = False
+        self.peers = peers
+
+    def start(self):
+        # reminder others we're active before LEADER_TIMEOUT expires
+        def active():
+            if self.active:
+                self.node.send(self.peers, Active())
+            self.set_timer(LEADER_TIMEOUT / 2.0, active)
+        active()
+
+    def spawn_scout(self):
+        assert not self.scouting
+        self.scouting = True
+        self.scout_cls(self.node, self.ballot_num, self.peers).start()
+
+    def do_Adopted(self, sender, ballot_num, accepted_proposals):
+        self.scouting = False
+        self.proposals.update(accepted_proposals)
+        # note that we don't re-spawn commanders here; if there are undecided
+        # proposals, the replicas will re-propose
+        self.logger.info("leader becoming active")
+        self.active = True
+
+    def spawn_commander(self, ballot_num, slot):
+        proposal = self.proposals[slot]
+        self.commander_cls(self.node, ballot_num, slot, proposal, self.peers).start()
+
+    def do_Preempted(self, sender, slot, preempted_by):
+        if not slot:  # from the scout
+            self.scouting = False
+        self.logger.info("leader preempted by %s", preempted_by.leader)
+        self.active = False
+        self.ballot_num = Ballot((preempted_by or self.ballot_num).n + 1, 
+                                 self.ballot_num.leader)
+
+    def do_Propose(self, sender, slot, proposal):
+        if slot not in self.proposals:
+            if self.active:
+                self.proposals[slot] = proposal
+                self.logger.info("spawning commander for slot %d" % (slot,))
+                self.spawn_commander(self.ballot_num, slot)
+            else:
+                if not self.scouting:
+                    self.logger.info("got PROPOSE when not active - scouting")
+                    self.spawn_scout()
+                else:
+                    self.logger.info("got PROPOSE while scouting; ignored")
+        else:
+            self.logger.info("got PROPOSE for a slot already being proposed")
+```
+
+> The leader creates a scout role when it wants to become active, in response to receiving a `Propose` when it is inactive (Figure 3.7.) The scout sends (and re-sends, if necessary) a `Prepare` message, and collects `Promise` responses until it has heard from a majority of its peers or until it has been preempted. It communicates back to the leader with `Adopted` or `Preempted`, respectively.
+
+領導者在啟動時會創造偵查者的角色，用以在待機狀態下接收 `Propose`(如下圖)。 偵查者會送出(或重送)一個 `Prepare` 的訊息，並收集 `Promise` 的回應直到獲得同層級大多數的接受者的回應又或是收到這個這個提案號已經被搶佔為止。他會再用 `Adopted` 或 `Preempted` 去跟領導者回報。
+
+![](http://aosabook.org/en/500L/cluster-images/leaderscout.png)
+Figure 3.7 - Scout
+
+```=python
+class Scout(Role):
+
+    def __init__(self, node, ballot_num, peers):
+        super(Scout, self).__init__(node)
+        self.ballot_num = ballot_num
+        self.accepted_proposals = {}
+        self.acceptors = set([])
+        self.peers = peers
+        self.quorum = len(peers) / 2 + 1
+        self.retransmit_timer = None
+
+    def start(self):
+        self.logger.info("scout starting")
+        self.send_prepare()
+
+    def send_prepare(self):
+        self.node.send(self.peers, Prepare(ballot_num=self.ballot_num))
+        self.retransmit_timer = self.set_timer(PREPARE_RETRANSMIT, self.send_prepare)
+
+    def update_accepted(self, accepted_proposals):
+        acc = self.accepted_proposals
+        for slot, (ballot_num, proposal) in accepted_proposals.iteritems():
+            if slot not in acc or acc[slot][0] < ballot_num:
+                acc[slot] = (ballot_num, proposal)
+
+    def do_Promise(self, sender, ballot_num, accepted_proposals):
+        if ballot_num == self.ballot_num:
+            self.logger.info("got matching promise; need %d" % self.quorum)
+            self.update_accepted(accepted_proposals)
+            self.acceptors.add(sender)
+            if len(self.acceptors) >= self.quorum:
+                # strip the ballot numbers from self.accepted_proposals, now that it
+                # represents a majority
+                accepted_proposals = \ 
+                    dict((s, p) for s, (b, p) in self.accepted_proposals.iteritems())
+                # We're adopted; note that this does *not* mean that no other
+                # leader is active.  # Any such conflicts will be handled by the
+                # commanders.
+                self.node.send([self.node.address],
+                    Adopted(ballot_num=ballot_num, 
+                            accepted_proposals=accepted_proposals))
+                self.stop()
+        else:
+            # this acceptor has promised another leader a higher ballot number,
+            # so we've lost
+            self.node.send([self.node.address], 
+                Preempted(slot=None, preempted_by=ballot_num))
+            self.stop()
+```
+
+> The leader creates a commander role for each slot where it has an active proposal (Figure 3.8.) Like a scout, a commander sends and re-sends `Accept` messages and waits for a majority of acceptors to reply with `Accepted`, or for news of its preemption. When a proposal is accepted, the commander broadcasts a `Decision` message to all nodes. It responds to the leader with `Decided` or `Preempted`.
