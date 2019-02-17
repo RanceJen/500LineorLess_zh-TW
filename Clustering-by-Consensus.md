@@ -431,7 +431,7 @@ class Acceptor(Role):
             slot=slot, ballot_num=self.ballot_num))
 ```
 
-#### Replica(仿製品)
+#### Replica(臨摹者)
 
 > The `Replica` class is the most complicated role class, as it has a few closely related responsibilities:
 > * Making new proposals;
@@ -445,11 +445,11 @@ class Acceptor(Role):
 * 追蹤現在的領導者是誰
 * 為叢集加入新的節點
 
-> 以下 Replica 翻成仿製品
+> 以下 Replica 翻成臨摹者
 
 > The replica creates new proposals in response to `Invoke` messages from clients, selecting what it believes to be an unused slot and sending a `Propose` message to the current leader (Figure 3.2.) Furthermore, if the consensus for the selected slot is for a different proposal, the replica must re-propose with a new slot.
 
-仿製品會為客戶端發起一個提案作為回應，選擇一個尚未使用的插槽並送訊息給當前的領導者。此外如果選擇插槽回應的共識是給其他提案的，則仿製品需要重送提案給新的插槽。
+臨摹者會為客戶端發起一個提案作為回應，選擇一個尚未使用的插槽並送訊息給當前的領導者。此外如果選擇插槽回應的共識是給其他提案的，則臨摹者需要重送提案給新的插槽。
 ![](https://i.imgur.com/5c33ea4.png)
 Figure 3.2 - Replica Role Control Flow
 
@@ -459,40 +459,40 @@ Figure 3.2 - Replica Role Control Flow
 
 > In some circumstances, it's possible for a slot to have no active proposals and no decision. The state machine is required to execute slots one by one, so the cluster must reach a consensus on something to fill the slot. To protect against this possibility, replicas make a "no-op" proposal whenever they catch up on a slot. If such a proposal is eventually decided, then the state machine does nothing for that slot.
 
-在某些情況下，有可能一個插槽並沒有提案要被決議。但狀態機仍需要一個一個的執行插槽，所以叢集必須達成某種共識來填滿這些空插槽。為了應對這種可能性，當仿製品發現這種插槽它會製作一個 "no-op" 的提案，如果這種提案被決議了，然後狀態機並不會實際做任何事。
+在某些情況下，有可能一個插槽並沒有提案要被決議。但狀態機仍需要一個一個的執行插槽，所以叢集必須達成某種共識來填滿這些空插槽。為了應對這種可能性，當臨摹者發現這種插槽它會製作一個 "no-op" 的提案，如果這種提案被決議了，然後狀態機並不會實際做任何事。
 
 > Likewise, it's possible for the same proposal to be decided twice. The replica skips invoking the state machine for any such duplicate proposals, performing no transition for that slot.
 
-同樣的，有可能同一個提案被重複決議，對於任何重複的提案仿製品會略過不調用狀態機，確保針對這個插槽沒有任何狀態轉換。
+同樣的，有可能同一個提案被重複決議，對於任何重複的提案臨摹者會略過不調用狀態機，確保針對這個插槽沒有任何狀態轉換。
 
 > Replicas need to know which node is the active leader in order to send Propose messages to it. There is a surprising amount of subtlety required to get this right, as we'll see later. Each replica tracks the active leader using three sources of information.
 
-仿製品必須知道哪個節點是運行中的領導者才能發提案訊息給它。這需要一些極為精妙的操作才能達成，我們在後面就會看到，仿製品用三種訊息做來源來追蹤現存的領導者。
+臨摹者必須知道哪個節點是運行中的領導者才能發提案訊息給它。這需要一些極為精妙的操作才能達成，我們在後面就會看到，臨摹者用三種訊息做來源來追蹤現存的領導者。
 
 > When the leader role becomes active, it sends an `Adopted` message to the replica on the same node (Figure 3.3.)
 
-當領導者這項角色被啟動時，他會送一個 `Adopted` 的訊息到相同節點上所有的仿製品。(如下圖)
+當領導者這項角色被啟動時，他會送一個 `Adopted` 的訊息到相同節點上所有的臨摹者。(如下圖)
 
 ![](http://aosabook.org/en/500L/cluster-images/adopted.png)
 Figure 3.3 - Adopted
 
 > When the acceptor role sends a `Promise` to a new leader, it sends an `Accepting` message to its local replica (Figure 3.4.)
 
-而當接收者的角色發送一個 `Promise` 給新的領導者時，它會再送一個接受 `Accepting` 的訊息給本地的仿製品。(如下圖)
+而當接收者的角色發送一個 `Promise` 給新的領導者時，它會再送一個接受 `Accepting` 的訊息給本地的臨摹者。(如下圖)
 
 ![](http://aosabook.org/en/500L/cluster-images/accepting.png)
 Figure 3.4 - Accepting
 
 > The active leader sends `Active` messages as a heartbeat (Figure 3.5.) If no such message arrives before the `LEADER_TIMEOUT` expires, the replica assumes the leader is dead and moves on to the next leader. In this case, it's important that all replicas choose the same new leader, which we accomplish by sorting the members and selecting the next one in the list.
 
-活動中的領導者會送出 `Active` 的訊息作為心跳包(如下圖)，如果在 `LEADER_TIMEOUT` 超時之前一直都沒有收到這個訊息的話，仿製品會認定領導者已經死了並選出下個領導者。在這種情況下，讓所有仿製品都正確選擇相同的新領導者是很重要的，我們藉由排序並且選擇列表中的下一位成員來完成這件事。
+活動中的領導者會送出 `Active` 的訊息作為心跳包(如下圖)，如果在 `LEADER_TIMEOUT` 超時之前一直都沒有收到這個訊息的話，臨摹者會認定領導者已經死了並選出下個領導者。在這種情況下，讓所有臨摹者都正確選擇相同的新領導者是很重要的，我們藉由排序並且選擇列表中的下一位成員來完成這件事。
 
 ![](http://aosabook.org/en/500L/cluster-images/active.png)
 Figure 3.5 - Active
 
 > Finally, when a node joins the network, the bootstrap role sends a `Join` message (Figure 3.6.) The replica responds with a `Welcome` message containing its most recent state, allowing the new node to come up to speed quickly.
 
-在最後，當一個節點加入整個網路時，引導者的角色會送出一個 `Join` 的訊息，而仿製品則會回他一個帶有最新狀態的 `Welcome` 的訊息，讓新的節點可以盡快加入(如下圖)。
+在最後，當一個節點加入整個網路時，引導者的角色會送出一個 `Join` 的訊息，而臨摹者則會回他一個帶有最新狀態的 `Welcome` 的訊息，讓新的節點可以盡快加入(如下圖)。
 
 ![](http://aosabook.org/en/500L/cluster-images/bootstrap.png)
 Figure 3.6 - Bootstrap
@@ -740,3 +740,299 @@ class Scout(Role):
 ```
 
 > The leader creates a commander role for each slot where it has an active proposal (Figure 3.8.) Like a scout, a commander sends and re-sends `Accept` messages and waits for a majority of acceptors to reply with `Accepted`, or for news of its preemption. When a proposal is accepted, the commander broadcasts a `Decision` message to all nodes. It responds to the leader with `Decided` or `Preempted`.
+
+領導者為每個有活動中提案的插槽各創建一個指揮者的角色，就像指揮者一樣，指揮者送出或是重送一個 `Accept` 的訊習並等待大多數的接收者回覆一個 `Accepted` 或是已被搶佔的消息，當一個提案被通過時，指揮者廣播一個 `Decision` 的訊息給所有節點(包含自己喔！)，並回應領導者 `Decided` 或 `Preempted` 的訊息。
+
+![](http://aosabook.org/en/500L/cluster-images/leadercommander.png)
+Figure 3.8 - Commander
+
+```=python
+class Commander(Role):
+
+    def __init__(self, node, ballot_num, slot, proposal, peers):
+        super(Commander, self).__init__(node)
+        self.ballot_num = ballot_num
+        self.slot = slot
+        self.proposal = proposal
+        self.acceptors = set([])
+        self.peers = peers
+        self.quorum = len(peers) / 2 + 1
+
+    def start(self):
+        self.node.send(set(self.peers) - self.acceptors, Accept(
+            slot=self.slot, ballot_num=self.ballot_num, proposal=self.proposal))
+        self.set_timer(ACCEPT_RETRANSMIT, self.start)
+
+    def finished(self, ballot_num, preempted):
+        if preempted:
+            self.node.send([self.node.address], 
+                           Preempted(slot=self.slot, preempted_by=ballot_num))
+        else:
+            self.node.send([self.node.address], 
+                           Decided(slot=self.slot))
+        self.stop()
+
+    def do_Accepted(self, sender, slot, ballot_num):
+        if slot != self.slot:
+            return
+        if ballot_num == self.ballot_num:
+            self.acceptors.add(sender)
+            if len(self.acceptors) < self.quorum:
+                return
+            self.node.send(self.peers, Decision(
+                           slot=self.slot, proposal=self.proposal))
+            self.finished(ballot_num, False)
+        else:
+            self.finished(ballot_num, True)
+```
+
+> As an aside, a surprisingly subtle bug appeared here during development. At the time, the network simulator introduced packet loss even on messages within a node. When all `Decision` messages were lost, the protocol could not proceed. The replica continued to re-transmit Propose messages, but the leader ignored them as it already had a proposal for that slot. The replica's catch-up process could not find the result, as no replica had heard of the decision. The solution was to ensure that local messages are always delivered, as is the case for real network stacks.
+
+補充個題外話，在開發時我發現一個令人訝異的微妙 bug ，在當時網路模擬器啟用了掉包的設定(就連在同一個節點上的訊息也掉)，當所有的 `Decision` 都遺失時，協議無法繼續進行，臨摹者會重送提案的訊息，而領導者則會忽略這個訊息，因為在該插槽中已經有相同的提案。加上因為沒有任何臨摹者收到決議，所以臨摹者的進程搜尋不到任何結果。解決的方案是保證本地的訊息一定會被送到，就像現實中的網路一樣。
+
+#### Bootstrap(引導者)
+
+> When a node joins the cluster, it must determine the current cluster state before it can participate. The bootstrap role handles this by sending `Join` messages to each peer in turn until it receives a `Welcome`. Bootstrap's communication diagram is shown above in [Replica](#Replica(臨摹者)).
+
+當一個節點要加入叢集之前，必須先確定當前叢集的狀態。引導者的角色藉由送出 `Join` 給每一個同層級的直到收到 `Welcome` 為止來處理這件事情。引導者的通訊流程圖在[Replica](#Replica(臨摹者))章節中有提及。
+
+> An early version of the implementation started each node with a full set of roles (replica, leader, and acceptor), each of which began in a "startup" phase, waiting for information from the `Welcome` message. This spread the initialization logic around every role, requiring separate testing of each one. The final design has the bootstrap role adding each of the other roles to the node once startup is complete, passing the initial state to their constructors.
+
+在早期的實作中透過運行全部的角色來啟動一個節點。每一個都由「啟動」的程序開始執行並等待 `Welcome` 的訊息。這樣就將初始化的邏輯分散到了每個角色上，必須要對每一個分別做測試。而在最後的設計中則由引導者在啟動完成後將不同的角色加入節點中。並傳遞初始的狀態給他們的建構子。
+
+```=python
+class Bootstrap(Role):
+
+    def __init__(self, node, peers, execute_fn,
+                 replica_cls=Replica, acceptor_cls=Acceptor, leader_cls=Leader,
+                 commander_cls=Commander, scout_cls=Scout):
+        super(Bootstrap, self).__init__(node)
+        self.execute_fn = execute_fn
+        self.peers = peers
+        self.peers_cycle = itertools.cycle(peers)
+        self.replica_cls = replica_cls
+        self.acceptor_cls = acceptor_cls
+        self.leader_cls = leader_cls
+        self.commander_cls = commander_cls
+        self.scout_cls = scout_cls
+
+    def start(self):
+        self.join()
+
+    def join(self):
+        self.node.send([next(self.peers_cycle)], Join())
+        self.set_timer(JOIN_RETRANSMIT, self.join)
+
+    def do_Welcome(self, sender, state, slot, decisions):
+        self.acceptor_cls(self.node)
+        self.replica_cls(self.node, execute_fn=self.execute_fn, peers=self.peers,
+                         state=state, slot=slot, decisions=decisions)
+        self.leader_cls(self.node, peers=self.peers, commander_cls=self.commander_cls,
+                        scout_cls=self.scout_cls).start()
+        self.stop()
+```
+
+### Seed (種子)
+
+> In normal operation, when a node joins the cluster, it expects to find the cluster already running, with at least one node willing to respond to a `Join` message. But how does the cluster get started? One option is for the bootstrap role to determine, after attempting to contact every other node, that it is the first in the cluster. But this has two problems. First, for a large cluster it means a long wait while each `Join` times out. More importantly, in the event of a network partition, a new node might be unable to contact any others and start a new cluster.
+
+在一般的操作中當一個節點要加入叢集時，它會預期能找到一個正在運行中的叢集，至少有一個節點會願意回應 `Join` 訊息，那叢集該如何啟動？其中一個選項就是有引導者得來決定，在嘗試聯繫所有其他的節點失敗後，則它就是叢集中的第一個。但這種做法有兩種問題：第一點是對於一個大型的叢集來說它可能必須要等待很久直到所有的 `Join` 請求都超時。還有更重要的一點是在網路分區中，一個新的節點可能因為沒辦法連接到任何其他的區段而錯誤開啟一個新的叢集。
+
+> Network partitions are the most challenging failure case for clustered applications. In a network partition, all cluster members remain alive, but communication fails between some members. For example, if the network link joining a cluster with nodes in Berlin and Taipei fails, the network is partitioned. If both parts of a cluster continue to operate during a partition, then re-joining the parts after the network link is restored can be challenging. In the Multi-Paxos case, the healed network would be hosting two clusters with different decisions for the same slot numbers.
+
+對於叢集式的應用網路分區是最有挑戰性的失敗案例，在網路的各個分段中，所有叢集的成員都是存活的，但叢集之間的通訊卻不一定成功。舉個栗子如果柏林跟台北的叢集連結建立失敗，則網路就被分段了，如果兩邊各自繼續在自己的區段中運行，則在網路連接恢復要重新加入的部份會是很大的挑戰。在 Multi-Paxos 中這種情況則會導致恢復的網路中兩個叢集內相同的插槽編號卻個別包含不同的決議。
+
+> To avoid this outcome, creating a new cluster is a user-specified operation. Exactly one node in the cluster runs the seed role, with the others running bootstrap as usual. The seed waits until it has received `Join` messages from a majority of its peers, then sends a `Welcome` with an initial state for the state machine and an empty set of decisions. The seed role then stops itself and starts a bootstrap role to join the newly-seeded cluster.
+
+因為避免這種結果，所以要建立一個叢集應該是使用者指定的操作。叢集中只有一個節點作為種子的角色，其他的則是擔任引導者。種子的角色會等待直到收到大多數同層級的 `Join` 訊息，然後送出 `Welcome` 及初始狀態跟空個決議集合。然後停止自己並啟動一個引導者的角色來加入這個新種出來的叢集。
+
+> Seed emulates the `Join`/`Welcome` part of the `bootstrap`/`replica` interaction, so its communication diagram is the same as for the replica role
+
+種子會模仿 `bootstrap`/`replica` 的 `Join`/`Welcome` 互動方式，所以通訊流程圖也是跟臨摹者的部份相同。
+
+```=python
+class Seed(Role):
+
+    def __init__(self, node, initial_state, execute_fn, peers, 
+                 bootstrap_cls=Bootstrap):
+        super(Seed, self).__init__(node)
+        self.initial_state = initial_state
+        self.execute_fn = execute_fn
+        self.peers = peers
+        self.bootstrap_cls = bootstrap_cls
+        self.seen_peers = set([])
+        self.exit_timer = None
+
+    def do_Join(self, sender):
+        self.seen_peers.add(sender)
+        if len(self.seen_peers) <= len(self.peers) / 2:
+            return
+
+        # cluster is ready - welcome everyone
+        self.node.send(list(self.seen_peers), Welcome(
+            state=self.initial_state, slot=1, decisions={}))
+
+        # stick around for long enough that we don't hear any new JOINs from
+        # the newly formed cluster
+        if self.exit_timer:
+            self.exit_timer.cancel()
+        self.exit_timer = self.set_timer(JOIN_RETRANSMIT * 2, self.finish)
+
+    def finish(self):
+        # bootstrap this node into the cluster we just seeded
+        bs = self.bootstrap_cls(self.node, 
+                                peers=self.peers, execute_fn=self.execute_fn)
+        bs.start()
+        self.stop()
+```
+
+#### Requester (提案者)
+
+> The requester role manages a request to the distributed state machine. The role class simply sends `Invoke` messages to the local replica until it receives a corresponding `Invoked`. See the "Replica" section, above, for this role's communication diagram.
+
+提案者負責管理對於分散式狀態機的請求，這個角色類別單純的送出 `Invoke` 的訊息給本地的臨摹者並等待接收到對應的 `Invoked`。 通訊流程圖可見「臨摹者」 的段落。
+
+```=python
+class Requester(Role):
+
+    client_ids = itertools.count(start=100000)
+
+    def __init__(self, node, n, callback):
+        super(Requester, self).__init__(node)
+        self.client_id = self.client_ids.next()
+        self.n = n
+        self.output = None
+        self.callback = callback
+
+    def start(self):
+        self.node.send([self.node.address], 
+                       Invoke(caller=self.node.address, 
+                              client_id=self.client_id, input_value=self.n))
+        self.invoke_timer = self.set_timer(INVOKE_RETRANSMIT, self.start)
+
+    def do_Invoked(self, sender, client_id, output):
+        if client_id != self.client_id:
+            return
+        self.logger.debug("received output %r" % (output,))
+        self.invoke_timer.cancel()
+        self.callback(output)
+        self.stop()
+```
+
+#### Summary(總結)
+
+> To recap, cluster's roles are:
+>*  Acceptor -- make promises and accept proposals
+>*  Replica -- manage the distributed state machine: submitting proposals, committing decisions, and responding to requesters
+>*  Leader -- lead rounds of the Multi-Paxos algorithm
+>*  Scout -- perform the `Prepare`/`Promise` portion of the Multi-Paxos algorithm for a leader
+>*  Commander -- perform the `Accept`/`Accepted` portion of the Multi-Paxos algorithm for a leader
+>*  Bootstrap -- introduce a new node to an existing cluster
+>*  Seed -- create a new cluster
+>*  Requester -- request a distributed state machine operation
+
+總結一下，叢集有以下角色：
+
+* 接收者 -- 做出承諾並接受提案
+* 臨摹者 -- 管理分散式狀態機像是：提交提案、決議並回應提案者
+* 領導者 -- 引領整個 Multi-Paxos 的演算法執行
+* 偵查者 -- 負責領導者事務中 `Prepare`/`Promise` 的部份處理
+* 指揮者 -- 負責領導者事務中 `Accept`/`Accepted` 的部份處理
+* 引導者 -- 引導一個新的節點到現有的叢集中
+* 種子   -- 創建一個新的叢集
+* 提案者 -- 請求一個分散式狀態機的操作
+
+> There is just one more piece of equipment required to make Cluster go: the network through which all of the nodes communicate.
+
+只需要最後一個設備就能讓我們的叢集運作起來：就是透過網路讓所有的節點連結。
+
+### Network(網路)
+
+> Any network protocol needs the ability to send and receive messages and a means of calling functions at a time in the future.
+>
+> The `Network` class provides a simple simulated network with these capabilities and also simulates packet loss and message propagation delays.
+
+任何網路協議都需要有辦法傳送跟接收訊息，還有在後續調用函數的能力。
+`Network` 這個類別提供模擬上敘功能的能力，並且可以模擬封包遺失跟訊息傳送延遲。
+
+> Timers are handled using Python's `heapq` module, allowing efficient selection of the next event. Setting a timer involves pushing a `Timer` object onto the heap. Since removing items from a heap is inefficient, cancelled timers are left in place but marked as cancelled.
+
+我們使用 Python 的 `heapq` 來管理計時器，允許高效的檢索下一個事件。設定一個計時器只需要把 `Timer` 的物件推入 heap 中。此外由於從 heap 中移除物件是非常低效的，所以取消一個計時器時我們並不會移除他，只是標記為取消而已。
+
+> Message transmission uses the timer functionality to schedule a later delivery of the message at each node, using a random simulated delay. We again use `functools.partial` to set up a future call to the destination node's `receive` method with appropriate arguments.
+
+在訊息的傳輸上，我們使用計時器的函式來規劃每個節點的送達延遲，搭隨機的延遲時間來模擬。利用 `functools.partial` 的及適當的參數來設定到達節點的 `receive` 方法。
+
+> Running the simulation just involves popping timers from the heap and executing them if they have not been cancelled and if the destination node is still active.
+
+運行模擬的流程只需要取得 heap 中被推出的計時器，並在沒有被取消以及目的地依然存活的情況下調用該計時器。
+
+```=python
+class Timer(object):
+
+    def __init__(self, expires, address, callback):
+        self.expires = expires
+        self.address = address
+        self.callback = callback
+        self.cancelled = False
+
+    def __cmp__(self, other):
+        return cmp(self.expires, other.expires)
+
+    def cancel(self):
+        self.cancelled = True
+
+
+class Network(object):
+    PROP_DELAY = 0.03
+    PROP_JITTER = 0.02
+    DROP_PROB = 0.05
+
+    def __init__(self, seed):
+        self.nodes = {}
+        self.rnd = random.Random(seed)
+        self.timers = []
+        self.now = 1000.0
+
+    def new_node(self, address=None):
+        node = Node(self, address=address)
+        self.nodes[node.address] = node
+        return node
+
+    def run(self):
+        while self.timers:
+            next_timer = self.timers[0]
+            if next_timer.expires > self.now:
+                self.now = next_timer.expires
+            heapq.heappop(self.timers)
+            if next_timer.cancelled:
+                continue
+            if not next_timer.address or next_timer.address in self.nodes:
+                next_timer.callback()
+
+    def stop(self):
+        self.timers = []
+
+    def set_timer(self, address, seconds, callback):
+        timer = Timer(self.now + seconds, address, callback)
+        heapq.heappush(self.timers, timer)
+        return timer
+
+    def send(self, sender, destinations, message):
+        sender.logger.debug("sending %s to %s", message, destinations)
+        # avoid aliasing by making a closure containing distinct deep copy of
+        # message for each dest
+        def sendto(dest, message):
+            if dest == sender.address:
+                # reliably deliver local messages with no delay
+                self.set_timer(sender.address, 0,  
+                               lambda: sender.receive(sender.address, message))
+            elif self.rnd.uniform(0, 1.0) > self.DROP_PROB:
+                delay = self.PROP_DELAY + self.rnd.uniform(-self.PROP_JITTER, 
+                                                           self.PROP_JITTER)
+                self.set_timer(dest, delay, 
+                               functools.partial(self.nodes[dest].receive, 
+                                                 sender.address, message))
+        for dest in (d for d in destinations if d in self.nodes):
+            sendto(dest, copy.deepcopy(message))
+```
