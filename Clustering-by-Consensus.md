@@ -1036,3 +1036,51 @@ class Network(object):
         for dest in (d for d in destinations if d in self.nodes):
             sendto(dest, copy.deepcopy(message))
 ```
+
+> While it's not included in this implementation, the component model allows us to swap in a real-world network implementation, communicating between actual servers on a real network, with no changes to the other components. Testing and debugging can take place using the simulated network, with production use of the library operating over real network hardware.
+
+雖然該元件不算是此實作的一部分，這個模組允許我們替換掉真實的網路環境，模擬伺服器間的通訊。對於使用在真實網路硬體上的函式庫，在模擬的網路下測試跟除錯會更為簡單及便利。
+
+### Debugging Support(除錯支援)
+
+> When developing a complex system such as this, the bugs quickly transition from trivial, like a simple NameError, to obscure failures that only manifest after several minutes of (simulated) proocol operation. Chasing down bugs like this involves working backward from the point where the error became obvious. Interactive debuggers are useless here, as they can only step forward in time.
+
+在開發這種複雜的系統時，由一些簡單的故障(像是名稱錯誤)常常在傳輸幾分鐘進行協議操作後變成模糊的故障。這樣的錯誤必須要從發生問題的地方一路向後追查，因此交互式除錯器在這裡用處不大，因為他們在時序上只能向前步進。
+
+> The most important debugging feature in Cluster is a deterministic simulator. Unlike a real network, it will behave exactly the same way on every run, given the same seed for the random number generator. This means that we can add additional debugging checks or output to the code and re-run the simulation to see the same failure in more detail.
+
+在叢集上最重要的除錯功能就是具有確定性的模擬器，跟真實網路不一樣，在給定隨機生成器相同種子的情況下，他們每次都會用完全相同的方式運行(具有確定性)。這代表我們可以在程式碼上追加額外的除錯檢查或輸出並且重新模擬，輕易的重現相同錯誤。
+
+> Of course, much of that detail is in the messages exchanged by the nodes in the cluster, so those are automatically logged in their entirety. That logging includes the role class sending or receiving the message, as well as the simulated timestamp injected via the `SimTimeLogger` class.
+
+還有很大一部份的細節藏在節點跟叢集交換的訊息中，所以他們會自動的被紀錄在日誌中。該日誌紀錄時會包含(發送/接收)的角色，並透過 `SimTimeLogger` 類別注入相應的時間戳記。
+
+```=python
+lass SimTimeLogger(logging.LoggerAdapter):
+
+    def process(self, msg, kwargs):
+        return "T=%.3f %s" % (self.extra['network'].now, msg), kwargs
+
+    def getChild(self, name):
+        return self.__class__(self.logger.getChild(name),
+                              {'network': self.extra['network']})   
+```
+
+> A resilient protocol such as this one can often run for a long time after a bug has been triggered. For example, during development, a data aliasing error caused all replicas to share the same decisions dictionary. This meant that once a decision was handled on one node, all other nodes saw it as already decided. Even with this serious bug, the cluster produced correct results for several transactions before deadlocking.
+
+像本次我們實作這種有適應力的協議通常可以在 bug 被觸發之後還運作很長一段時間。舉個栗子，一個數據引用錯誤導致所有的臨摹者使用同一個決議的 dictionary (Python 的一種資料)。這代表一個決議還在處理時，其他的節點看過去就會認為這已經被決議好了。就像這種嚴重的 bug ，叢集也會在傳輸出數個正確的結果之後才進入死鎖。
+
+> Assertions are an important tool to catch this sort of error early. Assertions should include any invariants from the algorithm design, but when the code doesn't behave as we expect, asserting our expectations is a great way to see where things go astray.
+
+Assertions(斷言) 是一個重要的工具可以來早期發現早期治療這種錯誤，斷言應該用來檢查在演算法層級具有不變性的設計。當程式並非按照這部份運行時，使用斷言來檢查我們期望的運作方向會是一個很好的方法來找出事情哪裡出錯了。
+
+```=python
+    assert not self.decisions.get(self.slot, None), \
+            "next slot to commit is already decided"
+    if slot in self.decisions:
+        assert self.decisions[slot] == proposal, \
+            "slot %d already decided with %r!" % (slot, self.decisions[slot])
+```
+
+> Identifying the right assumptions we make while reading code is a part of the art of debugging. In this code from `Replica.do_Decision`, the problem was that the `Decision` for the next slot to commit was being ignored because it was already in `self.decisions`. The underlying assumption being violated was that the next slot to be committed was not yet decided. Asserting this at the beginning of `do_Decision` identified the flaw and led quickly to the fix. Similarly, other bugs led to cases where different proposals were decided in the same slot -- a serious error.
+
