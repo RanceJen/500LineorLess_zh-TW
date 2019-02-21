@@ -1,4 +1,4 @@
-# 基於共識的叢集系統(Clustering by Consensus    by:Dustin J. Mitchell)
+    # 基於共識的叢集系統(Clustering by Consensus    by:Dustin J. Mitchell)
 
 [原文出處](http://aosabook.org/en/500L/clustering-by-consensus.html)
 
@@ -1084,3 +1084,78 @@ Assertions(斷言) 是一個重要的工具可以來早期發現早期治療這�
 
 > Identifying the right assumptions we make while reading code is a part of the art of debugging. In this code from `Replica.do_Decision`, the problem was that the `Decision` for the next slot to commit was being ignored because it was already in `self.decisions`. The underlying assumption being violated was that the next slot to be committed was not yet decided. Asserting this at the beginning of `do_Decision` identified the flaw and led quickly to the fix. Similarly, other bugs led to cases where different proposals were decided in the same slot -- a serious error.
 
+在閱讀程式碼時確定「正確的假設」是一種除錯的藝術，在這段來自 `Replica.do_Decision` 的程式碼，問題是來自下一個插槽要提交的 `Decision` 由於已經存在 `self.decisions` 而被無視了。其內含的假設「下一個要提交插槽內的必是還沒決議的」被迫壞了。對其在 `do_Decision` 的開頭做出斷言確認整體流程就可以讓我們快速的修復它，對於其他的 bug 像是不同的提案被決議在同個插槽這種嚴重錯誤也有同樣的效果。
+
+> Many other assertions were added during development of the protocol, but in the interests of space, only a few remain.
+
+在開發階段還有加入很多其他的斷言，不過由於篇幅的限制，目前只留下了少數。
+
+### Testing
+
+> Some time in the last ten years, coding without tests finally became as crazy as driving without a seatbelt. Code without tests is probably incorrect, and modifying code is risky without a way to see if its behavior has changed.
+
+從過去十年期間開始，在沒有測試的情況下進行程式設計終於變成像是開車不綁安全帶這種瘋狂的事了。沒有經過測試的程式碼有很大可能是作物的，而且在沒有驗證方式的情況下修改它們也有不知行為是否變更的風險。
+
+> Testing is most effective when the code is organized for testability. There are a few active schools of thought in this area, but the approach we've taken is to divide the code into small, minimally connected units that can be tested in isolation. This agrees nicely with the role model, where each role has a specific purpose and can operate in isolation from the others, resulting in a compact, self-sufficient class.
+
+在程式碼是為了可測試性所架構時進行測試是最為高效的，在如何作到這點上也有很多不同的作法，我們所採取的是將程式碼劃分為小型元件，最小化各單位之間的連結，讓我們盡可能單獨對其進行測試。這很符合角色模型的作法，每個角色都可以獨立運行，是一個緊湊並且自給自足的類別。
+
+> Cluster is written to maximize that isolation: all communication between roles takes place via messages, with the exception of creating new roles. For the most part, then, roles can be tested by sending messages to them and observing their responses.
+
+叢集就是被寫來最大化這種獨立性的，除了創建新角色以外，所有角色之間的通訊都透過訊息來進行。因此最棒的就是每個角色都可以透過傳送訊息以及觀察回應來進行測試。
+
+#### Unit Testing
+
+> The unit tests for Cluster are simple and short:
+
+叢集的單元測試非常簡短。
+
+```=python
+class Tests(utils.ComponentTestCase):
+    def test_propose_active(self):
+        """A PROPOSE received while active spawns a commander."""
+        self.activate_leader()
+        self.node.fake_message(Propose(slot=10, proposal=PROPOSAL1))
+        self.assertCommanderStarted(Ballot(0, 'F999'), 10, PROPOSAL1)
+```
+
+> This method tests a single behavior (commander spawning) of a single unit (the Leader class). It follows the well-known "arrange, act, assert" pattern: set up an active leader, send it a message, and check the result.
+
+這個方法用單元測試的方式來測試一個行為(領導者產生指揮者)，它遵循「已知」的「安排、對應行為、斷言」的模式，來設置一個有效的領導者，傳送訊息，並檢查結果。
+
+####Dependency Injection(依賴性注入)
+
+> We use a technique called "dependency injection" to handle creation of new roles. Each role class which adds other roles to the network takes a list of class objects as constructor arguments, defaulting to the actual classes. For example, the constructor for Leader looks like this
+
+我們用「依賴性注入」的技術來處理新角色的創建，每個角色類別都將建構子參數作為建構的參數，默認則為實際的該類別，像是 Leader 的建構子看起來像這樣
+
+```=python
+class Leader(Role):
+    def __init__(self, node, peers, commander_cls=Commander, scout_cls=Scout):
+        super(Leader, self).__init__(node)
+        self.ballot_num = Ballot(0, node.address)
+        self.active = False
+        self.proposals = {}
+        self.commander_cls = commander_cls
+        self.scout_cls = scout_cls
+        self.scouting = False
+        self.peers = peers
+```
+
+> The `spawn_scout` method (and similarly, `spawn_commander`) creates the new role object with `self.scout_cls`:
+
+`spawn_scout` 這個方法用 `self.scout_cls` 來創建新的角色類別
+
+> 譯註：注意 `self.scout_cls` 的內容其實是我們剛剛建構時傳近來的參數，因此我們可以用建構時的參數來控制實際生成的物件)
+
+```=python
+class Leader(Role):
+    def spawn_scout(self):
+        assert not self.scouting
+        self.scouting = True
+        self.scout_cls(self.node, self.ballot_num, self.peers).start()
+```
+
+> The magic of this technique is that, in testing, Leader can be given fake classes and thus tested separately from Scout and Commander.
+
+神奇之處就在這了，在測試時領導者可以被給予一個假的類別，因此測試本身就從實際的指揮者和偵查者類別拆開了。 
