@@ -1156,6 +1156,77 @@ class Leader(Role):
         self.scout_cls(self.node, self.ballot_num, self.peers).start()
 ```
 
-> The magic of this technique is that, in testing, Leader can be given fake classes and thus tested separately from Scout and Commander.
+> The magic of this technique is that, in testing,  `Leader` can be given fake classes and thus tested separately from `Scout` and `Commander`.
 
-神奇之處就在這了，在測試時領導者可以被給予一個假的類別，因此測試本身就從實際的指揮者和偵查者類別拆開了。 
+神奇之處就在這了，在測試時領導者可以被給予一個假的類別，因此測試本身就從實際的指揮者和偵查者類別拆開了。
+
+
+#### Interface Correctness(界面正確性)
+
+> One pitfall of a focus on small units is that it does not test the interfaces between units. For example, unit tests for the acceptor role verify the format of the `accepted` attribute of the `Promise` message, and the unit tests for the scout role supply well-formatted values for the attribute. Neither test checks that those formats match.
+
+專住在小單元的測試上會有一個誤區，就是各單元之間的界面並沒有被測試到。舉個栗子來說，對接受者的角色進行單元測試可以測試 `Promise` 中的 `accepted` 格式是否正確。單元測試為偵查者的角色提供了格式正確的值，卻沒有測試兩者之間的傳輸的格式是互相匹配的。
+
+> One approach to fixing this issue is to make the interfaces self-enforcing. In Cluster, the use of named tuples and keyword arguments avoids any disagreement over messages attributes. Because the only interaction between role classes is via messages, this covers a large part of the interface.
+
+一個修正這個問題的作法是讓這個界面是有自我完成能力的。在叢集中，使用 named tuples 可以避免訊息屬性之間的不一致，因為角色類別之間的互動都只會透過訊息來完成，這就包含了大部分界面的大部分。
+
+> For specific issues such as the format of `accepted_proposals`, both the real and test data can be verified using the same function, in this case `verifyPromiseAccepted`. The tests for the acceptor use this method to verify each returned `Promise`, and the tests for the scout use it to verify every fake `Promise`.
+
+像這種像是 `accepted_proposals` 格式的問題，真實跟測試的資料都可以用同一個函式來驗證，在這個案例中為 `verifyPromiseAccepted`，對於接受者的測試我們用這個方法來驗證回傳的 `Promise`，至於對於偵查者我們則用此函式來製作假的 `Promise`
+
+#### Integration Testing(集成測試 CI)
+
+> The final bulwark against interface problems and design errors is integration testing. An integration test assembles multiple units together and tests their combined effect. In our case, that means building a network of several nodes, injecting some requests into it, and verifying the results. If there are any interface issues not discovered in unit testing, they should cause the integration tests to fail quickly.
+
+用來處理界面問題跟設計錯誤的最後一個防線則是集成測試，集成測試會組裝多個單元並測試他們組合後的效果，在我們的案例中就是建構具有數個節點的網路，注入一些請求，並檢驗結果。如果還有任何界面上的問題沒在單元測試中發現的，應該會很快的就導致集成測試失敗。
+
+> Because the protocol is intended to handle node failure gracefully, we test a few failure scenarios as well, including the untimely failure of the active leader.
+
+由於一個協議有義務優雅的處理節點的錯誤，所以我們也會測試幾個失敗的場景，像是過早啟動 leader 的錯誤之類的。
+
+> Integration tests are harder to write than unit tests, because they are less well-isolated. For Cluster, this is clearest in testing the failed leader, as any node could be the active leader. Even with a deterministic network, a change in one message alters the random number generator's state and thus unpredictably changes later events. Rather than hard-coding the expected leader, the test code must dig into the internal state of each leader to find one that believes itself to be active.
+
+集成測試比單元測試更難撰寫，因為測試之間的隔離性較差。對於一個叢集來說最為明顯的就是在測試領導者錯誤的時候。就算在具有確定性的網路之下，過程中一個訊息的變化就會導致隨機數產生器的狀態不同，因而導致後面的事件發生無法預測的改變。為了避免 hard-code 寫死指定的領導者這種作法，測試的程式碼需要深入到領導者的內部狀態，來找出認為自己是領導者的人。
+
+#### Fuzz Testing(模糊測試)
+
+It's very difficult to test resilient code: it is likely to be resilient to its own bugs, so integration tests may not detect even very serious bugs. It is also hard to imagine and construct tests for every possible failure mode.
+
+越是彈性的代碼越南測試，他們的彈性可能會隱藏自己的 bug ，所以集成測試可能不會找出一些嚴重的 bug 。也很難去想像或建構針對所有可能發生錯誤的測試。
+
+> A common approach to this sort of problem is "fuzz testing": running the code repeatedly with randomly changing inputs until something breaks. When something does break, all of the debugging support becomes critical: if the failure can't be reproduced, and the logging information isn't sufficient to find the bug, then you can't fix it!
+
+一個普通的解決方案是使用模糊測試，執行一段代碼會隨機的改變輸入直到任何錯誤發生，當錯誤發生時，除錯的支援就顯得重要。如果錯誤無法被重現，日誌又不足以讓我們找到 bug，那基本上就無法修復。
+
+> I performed some manual fuzz testing of cluster during development, but a full fuzz-testing infrastructure is beyond the scope of this project.
+
+我在開發時有手動對叢集做了一些模糊測試，至於完整的模糊測試架構則超出了本專案的範圍了。
+
+### Power Struggles(權責爭奪)
+
+> A cluster with many active leaders is a very noisy place, with scouts sending ever-increasing ballot numbers to acceptors, and no ballots being decided. A cluster with no active leader is quiet, but equally nonfunctional. Balancing the implementation so that a cluster almost always agrees on exactly one leader is remarkably difficult.
+
+有多個領導者的叢集是非常吵雜的，偵查者會不斷增加提案編號並送給接收者，但卻並不會有提案被決定(因為提案會一直互蓋)。一個沒有任何領導者的叢集是寂靜的，但與前者同樣沒作用。在我們的實作中要取得平衡讓叢集總是只同意一個領導者是特別困難的
+
+> It's easy enough to avoid fighting leaders: when `preempted`, a leader just accepts its new inactive status. However, this easily leads to a case where there are no active leaders, so an inactive leader will try to become active every time it gets a `Propose` message.
+
+要讓避免領導者角色的爭奪很簡單，當 `preempted` 發生時，領導者就接受它的新狀態為未啟用，但這很容易導致沒有任何領導者在運作的狀況。所以當一個未啟用的領導者接收到`Propose` 的訊息時就會嘗試去成為啟動狀態。
+
+> If the whole cluster doesn't agree on which member is the active leader, there's trouble: different replicas send `Propose` messages to different leaders, leading to battling scouts. So it's important that leader elections be decided quickly, and that all cluster members find out about the result as quickly as possible.
+
+當整個叢集對於哪個成員是領導者沒有共識時就會有問題發生：不同的臨摹者傳送 `Propose` 訊息給不同的領導者，導致偵查者互相搶佔。所以誰是領導者必須盡可能快速的決議並通知其他成員。
+
+> Cluster handles this by detecting a leader change as quickly as possible: when an acceptor sends a `Promise`, chances are good that the promised member will be the next leader. Failures are detected with a heartbeat protocol.
+
+叢集必須盡可能的快速偵測誰轉為領導者，當一個接受者送出 `Promise` 時，有很大的可能性它承諾的對象就是新的領導者。至於失敗則用心跳包的協議來檢測。
+
+## Further Extensions(未來展望)
+
+> Of course, there are plenty of ways we could extend and improve this implementation.
+
+當然還有很多種方法可以繼續擴展跟改進這個實作。
+
+### Catching Up
+
+In "pure" Multi-Paxos, nodes which fail to receive messages can be many slots behind the rest of the cluster. As long as the state of the distributed state machine is never accessed except via state machine transitions, this design is functional. To read from the state, the client requests a state-machine transition that does not actually alter the state, but which returns the desired value. This transition is executed cluster-wide, ensuring that it returns the same value everywhere, based on the state at the slot in which it is proposed.
