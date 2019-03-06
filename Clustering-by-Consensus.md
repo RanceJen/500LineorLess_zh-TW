@@ -1227,6 +1227,110 @@ It's very difficult to test resilient code: it is likely to be resilient to its 
 
 當然還有很多種方法可以繼續擴展跟改進這個實作。
 
-### Catching Up
+### Catching Up (追趕)
 
-In "pure" Multi-Paxos, nodes which fail to receive messages can be many slots behind the rest of the cluster. As long as the state of the distributed state machine is never accessed except via state machine transitions, this design is functional. To read from the state, the client requests a state-machine transition that does not actually alter the state, but which returns the desired value. This transition is executed cluster-wide, ensuring that it returns the same value everywhere, based on the state at the slot in which it is proposed.
+> In "pure" Multi-Paxos, nodes which fail to receive messages can be many slots behind the rest of the cluster. As long as the state of the distributed state machine is never accessed except via state machine transitions, this design is functional. To read from the state, the client requests a state-machine transition that does not actually alter the state, but which returns the desired value. This transition is executed cluster-wide, ensuring that it returns the same value everywhere, based on the state at the slot in which it is proposed.
+
+在原始的 Multi-Paxos 中，一個節點可能因為接收訊息失敗而導致插槽內的操作數量落後於叢集內的其他成員。又由於分散式的狀態機只透過用訊息觸發狀態轉換來溝通，因此我們會把讀取狀態的操作也設計成一種狀態轉換，即使此操作並不會真的改變狀態，這是個很實用的設計。但這個狀態轉換必須在整個叢集跑過一遍，確保基於該插槽的提案的所有成員都回傳相同值。
+
+> Even in the optimal case, this is slow, requiring several round trips just to read a value. If a distributed object store made such a request for every object access, its performance would be dismal. But when the node receiving the request is lagging behind, the request delay is much greater as that node must catch up to the rest of the cluster before making a successful proposal.
+
+即使在最好的狀態下這個操作也很低效，為了讀取一個值就需要在節點中跑好幾次，如果每次要存取分散式的物件都要提出這樣的請求，那效能會是非常令人沮喪的。還有當節點收到請求時是落後的，請求的延遲會更高，因為節點在成功做出提案之前還必須追上落後的部份。
+
+> A simple solution is to implement a gossip-style protocol, where each replica periodically contacts other replicas to share the highest slot it knows about and to request information on unknown slots. Then even when a `Decision` message was lost, the replica would quickly find out about the decision from one of its peers.
+
+一個簡單的解決方案是實作一個八卦式(閒聊八卦的那個八卦)的協議，每個臨摹者定期聯絡其他的臨摹者來同步最新的插槽資訊，同時也請求未知插槽的資訊，這樣當一個 `Decision` 的訊息丟失時，臨摹者就會很快的從其他地方發現這件事。
+
+### Consistent Memory Usage
+
+> A cluster-management library provides reliability in the presence of unreliable components. It shouldn't add unreliability of its own. Unfortunately, Cluster will not run for long without failing due to ever-growing memory use and message size.
+
+一個管理叢集的函式庫需要為不可靠的部件提供可靠性，所以他本身不能是不可靠的。不幸的是我們實作的叢集會因為無限增加的內存使用跟封包大小而無法存活太久。
+
+> 譯註：這個可靠性是指即使有部份發生錯誤也能正常運作的能力
+
+> In the protocol definition, acceptors and replicas form the "memory" of the protocol, so they need to remember everything. These classes never know when they will receive a request for an old slot, perhaps from a lagging replica or leader. To maintain correctness, then, they keep a list of every decision, ever, since the cluster was started. Worse, these decisions are transmitted between replicas in `Welcome` messages, making these messages enormous in a long-lived cluster.
+
+在協議的定義，接受者跟臨摹者必須要記憶所有發生過得協議，因為這些類別永遠不知道會不會收到落後插槽的請求，所以為了保持正確性他們必須保留所有決策的列表。更遭的是這些決策還會隨著 `Welcome` 的操作傳遞，這些訊息會在長時間存活的叢集中變得非常龐大。
+
+> 譯註：是因為 `Welcome` 之後必須同步狀態，等於要把叢集從頭到尾超多的決議操作塞到一個訊息內。
+
+> One technique to address this issue is to periodically "checkpoint" each node's state, keeping information about some limited number of decisions on hand. Nodes which are so out of date that they have not committed all slots up to the checkpoint must "reset" themselves by leaving and re-joining the cluster.
+
+一個解決方案是為節點設置「檢查點」，定期檢查每個節點的狀態並只保留有限的決策訊息，沒有提交所有插槽提案給檢查點的過時節點必須藉由離開再重新加入叢集來重置自己。
+
+### Persistent Storage (持久保存)
+
+> While it's OK for a minority of cluster members to fail, it's not OK for an acceptor to "forget" any of the values it has accepted or promises it has made.
+
+雖然少數的叢集成員可以操作失敗，但接受者並不能忘記他已承諾的值，。
+
+> Unfortunately, this is exactly what happens when a cluster member fails and restarts: the newly initialized Acceptor instance has no record of the promises its predecessor made. The problem is that the newly-started instance takes the place of the old.
+
+不幸的是這在叢集成員錯誤並重啟時有可能發生。新初始化的接受者實體並沒有重啟前承諾的紀錄，但它又確實取代了重啟前的位置。
+
+> There are two ways to solve this issue. The simpler solution involves writing acceptor state to disk and re-reading that state on startup. The more complex solution is to remove failed cluster members from the cluster, and require that new members be added to the cluster. This kind of dynamic adjustment of the cluster membership is called a "view change".
+
+有兩個方式可以解決這個問題，簡單的解決方案會將接受者的狀態不斷寫入硬碟，並在重啟時讀取。複雜一點的解決方案則是從叢集中移除發生錯誤的舊成員，將重啟的視為新成員加入叢集中，這種成員資格的動態調整稱為「視圖更改」
+
+### View Changes (視圖更改)
+
+> Operations engineers need to be able to resize clusters to meet load and availability requirements. A simple test project might begin with a minimal cluster of three nodes, where any one can fail without impact. When that project goes "live", though, the additional load will require a larger cluster.
+
+操作工程師需要能夠更改叢集的大小來符合負載跟可用性跟需求，一個簡單的測試專案含有最小的叢集會需要三個節點，而且其中任何一個可以錯誤卻不會影響叢集。但是當專案真正啟用時，額外的負載量會需要更大的叢集。
+
+> Cluster, as written, cannot change the set of peers in a cluster without restarting the entire cluster. Ideally, the cluster would be able to maintain a consensus about its membership, just as it does about state machine transitions. This means that the set of cluster members (the view) can be changed by special view-change proposals. But the Paxos algorithm depends on universal agreement about the members in the cluster, so we must define the view for each slot.
+
+如上所敘，叢集無法在不重啟的情況下更改對應的方案規模，在理想情況下，叢集藉由維護成員的共識來運作，這代表叢集的成員(視圖)可以藉由特殊的更改視圖提案來改變，但 
+Paxos 的演算法是藉由成員的共同協議來溝通，所以我們需要為了每個插槽定義視圖。
+
+> 譯註：意思是必須紀錄每個插槽(狀態)當下的成員視圖，這樣才知道決策時的成員有哪些，回朔的時候不會多送給當時不存在的成員之類的。
+
+> Lamport addresses this challenge in the final paragraph of "Paxos Made Simple":
+>> We can allow a leader to get α commands ahead by letting the set of servers that execute instance i+α of the consensus algorithm be specified by the state after execution of the ith state machine command. (Lamport, 2001)
+> The idea is that each instance of Paxos (slot) uses the view from α slots earlier. This allows the cluster to work on, at most, α slots at any one time, so a very small value of α limits concurrency, while a very large value of α makes view changes slow to take effect.
+
+Lamport 在 "Paxos Made Simple" 論文中紀錄了這個挑戰
+> 我們可以讓領導者在執行 α 個命令後才加入第 i 個實體，這樣第 i 個實體就能提前獲得 α 個命令。
+
+這個主意是每個插槽實際使用的是第 α 個之前的視圖，所以很小的 α 會限制併發性，而很大的 α 則會讓視圖的轉換很慢才生效。
+
+> 上面的作法我真的沒看懂，又沒付 code，等等要再研究一下
+
+> In early drafts of this implementation (dutifully preserved in the git history!), I implemented support for view changes (using α in place of 3). This seemingly simple change introduced a great deal of complexity:
+> * tracking the view for each of the last α
+> * committed slots and correctly sharing this with new nodes,
+> * ignoring proposals for which no slot is available,
+> * detecting failed nodes,
+> * properly serializing multiple competing view changes, and
+> * communicating view information between the leader and replica.
+
+在早期的實作草稿中(git 歷史中有)，我實現了對視圖更改的支援(α 帶入 3)，這個簡單的改動帶來了巨大的複雜性改變。
+* 要能跟蹤最後 α 個視圖
+* 提交的插槽要能正確的跟新節點共享
+* 忽略沒有可用插槽的提案
+* 檢測失敗的節點
+* 正確序列化對視圖更改的競爭
+* 在領導者跟臨摹者之間傳遞視圖更改的訊息
+
+> The result was far too large for this book! 
+
+得到的結果對於這本書來說太龐大了。
+
+## References
+
+> In addition to the original Paxos paper and Lamport's follow-up "Paxos Made Simple"2, our implementation added extensions that were informed by several other resources. The role names were taken from "Paxos Made Moderately Complex"3. "Paxos Made Live"4 was helpful regarding snapshots in particular, and "Paxos Made Practical" described view changes (although not of the type described here.) Liskov's "From Viewstamped Replication to Byzantine Fault Tolerance"5 provided yet another perspective on view changes. Finally, a Stack Overflow discussion was helpful in learning how members are added and removed from the system.
+
+除了最初的 Paxos 論文及 "Paxos Made Simple" 之外我們的實現還增加了幾種資源的擴展，角色名稱取自 "Paxos Made Moderately Complex"，"Paxos Made Live" 針對取得快照提供了幫助，"Paxos Made Practical" 敘述了視圖更改(儘管跟此處敘述的不太一樣)，Liskov 的 "From Viewstamped Replication to Byzantine Fault Tolerance" 提供了另外一個對於視圖更改的視角，最後 Stack Overflow 的討論有助於了解如何在系統中新增或刪除成員。
+
+---
+
+1. L. Lamport, "The Part-Time Parliament," ACM Transactions on Computer Systems, 16(2):133–169, May 1998.↩
+
+2. L. Lamport, "Paxos Made Simple," ACM SIGACT News (Distributed Computing Column) 32, 4 (Whole Number 121, December 2001) 51-58.↩
+
+3. R. Van Renesse and D. Altinbuken, "Paxos Made Moderately Complex," ACM Comp. Survey 47, 3, Article 42 (Feb. 2015)↩
+
+4. T. Chandra, R. Griesemer, and J. Redstone, "Paxos Made Live - An Engineering Perspective," Proceedings of the twenty-sixth annual ACM symposium on Principles of distributed computing (PODC '07). ACM, New York, NY, USA, 398-407.↩
+
+5. B. Liskov, "From Viewstamped Replication to Byzantine Fault Tolerance," In Replication, Springer-Verlag, Berlin, Heidelberg 121-149 (2010)↩
