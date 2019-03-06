@@ -1167,7 +1167,7 @@ class Leader(Role):
 
 專住在小單元的測試上會有一個誤區，就是各單元之間的界面並沒有被測試到。舉個栗子來說，對接受者的角色進行單元測試可以測試 `Promise` 中的 `accepted` 格式是否正確。單元測試為偵查者的角色提供了格式正確的值，卻沒有測試兩者之間的傳輸的格式是互相匹配的。
 
-> One approach to fixing this issue is to make the interfaces self-enforcing. In Cluster, the use of named tuples and keyword arguments avoids any disagreement over messages attributes. Because the only interaction between role classes is via messages, this covers a large part of the interface.
+> One approach to fixing this issue is to make the interfaces self-enforcing. In Cluster, the use of named tuples and keyword arguments avoids any disagreement over messages' attributes. Because the only interaction between role classes is via messages, this covers a large part of the interface.
 
 一個修正這個問題的作法是讓這個界面是有自我完成能力的。在叢集中，使用 named tuples 可以避免訊息屬性之間的不一致，因為角色類別之間的互動都只會透過訊息來完成，這就包含了大部分界面的大部分。
 
@@ -1295,7 +1295,7 @@ Lamport 在 "Paxos Made Simple" 論文中紀錄了這個挑戰
 
 這個主意是每個插槽實際使用的是第 α 個之前的視圖，所以很小的 α 會限制併發性，而很大的 α 則會讓視圖的轉換很慢才生效。
 
-> 上面的作法我真的沒看懂，又沒付 code，等等要再研究一下
+> 上面的作法我不是很確定自己有沒有看懂，又沒付 code，可能要再研究一下
 
 > In early drafts of this implementation (dutifully preserved in the git history!), I implemented support for view changes (using α in place of 3). This seemingly simple change introduced a great deal of complexity:
 > * tracking the view for each of the last α
