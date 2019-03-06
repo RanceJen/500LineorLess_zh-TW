@@ -1288,6 +1288,7 @@ Paxos 的演算法是藉由成員的共同協議來溝通，所以我們需要�
 
 > Lamport addresses this challenge in the final paragraph of "Paxos Made Simple":
 >> We can allow a leader to get α commands ahead by letting the set of servers that execute instance i+α of the consensus algorithm be specified by the state after execution of the ith state machine command. (Lamport, 2001)
+>
 > The idea is that each instance of Paxos (slot) uses the view from α slots earlier. This allows the cluster to work on, at most, α slots at any one time, so a very small value of α limits concurrency, while a very large value of α makes view changes slow to take effect.
 
 Lamport 在 "Paxos Made Simple" 論文中紀錄了這個挑戰
